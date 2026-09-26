@@ -1,0 +1,96 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import {
+  BadgeCheck, BarChart3, Bell, Boxes, ChevronRight, ClipboardCheck, Gauge,
+  HandCoins, Languages, LayoutDashboard, LogOut, Menu, PackagePlus, QrCode,
+  Search, Settings, ShieldCheck, Sprout, Store, Truck, Warehouse, X,
+} from "lucide-react";
+import type { GoogleUser } from "@/app/lib/google-auth";
+
+const modules = [
+  ["Overview", LayoutDashboard], ["My wool", Boxes], ["WoolKart", Store],
+  ["Reverse bidding", HandCoins], ["Traceability", QrCode], ["Quality", ClipboardCheck],
+  ["Transport", Truck], ["Warehouses", Warehouse], ["Services", Sprout],
+  ["Market prices", BarChart3],
+] as const;
+
+const journey = [
+  ["Sheared", "Gulmarg farm", "12 Sep, 08:20"], ["Quality verified", "Pashmina Lab, Srinagar", "13 Sep, 14:10"],
+  ["Auction live", "WoolKart", "14 Sep, 09:00"], ["Pickup scheduled", "Himalayan Logistics", "16 Sep, 11:30"],
+];
+
+const initialBatches = [
+  { id: "WT-2408-KAS", breed: "Kashmir Merino", weight: 184, grade: "A", status: "Auction live", bids: 7, price: 612 },
+  { id: "WT-2407-HIM", breed: "Gaddi", weight: 126, grade: "B+", status: "Quality check", bids: 0, price: 438 },
+  { id: "WT-2406-LAD", breed: "Changthangi", weight: 48, grade: "A+", status: "Sold", bids: 11, price: 1480 },
+];
+
+export default function DashboardClient({ user }: { user: GoogleUser }) {
+  const [active, setActive] = useState("Overview");
+  const [mobile, setMobile] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [batches, setBatches] = useState(initialBatches);
+  const [language, setLanguage] = useState("English");
+  const bestValue = useMemo(() => batches.reduce((sum, batch) => sum + batch.weight * batch.price, 0), [batches]);
+
+  function createBatch(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const batch = { id: `WT-${String(Date.now()).slice(-4)}-NEW`, breed: String(data.get("breed")), weight: Number(data.get("weight")), grade: "Pending", status: "Registered", bids: 0, price: Number(data.get("reserve")) };
+    setBatches((current) => [batch, ...current]);
+    setShowCreate(false);
+  }
+
+  return (
+    <main className="app-shell">
+      <aside className={`app-sidebar ${mobile ? "show" : ""}`}>
+        <div className="app-logo"><span className="brand-mark"><Sprout className="size-4" /></span><span>WoolTrace</span><button onClick={() => setMobile(false)}><X /></button></div>
+        <p className="side-label">WORKSPACE</p>
+        <nav>{modules.map(([label, Icon]) => <button className={active === label ? "active" : ""} key={label} onClick={() => { setActive(label); setMobile(false); }}><Icon /><span>{label}</span>{label === "Reverse bidding" && <b>7</b>}</button>)}</nav>
+        <div className="side-bottom"><button><Settings /> Settings</button><a href="/api/auth/logout"><LogOut /> Sign out</a></div>
+      </aside>
+
+      <section className="app-main">
+        <header className="app-header">
+          <button className="app-menu" onClick={() => setMobile(true)}><Menu /></button>
+          <div><p className="kicker">FARMER WORKSPACE</p><h1>{active}</h1></div>
+          <div className="app-actions"><label><Search /><input placeholder="Search batches" /></label><button className="icon-button"><Bell /></button><button className="language" onClick={() => setLanguage(language === "English" ? "हिन्दी" : "English")}><Languages /> {language}</button><div className="avatar">{user.picture ? <img src={user.picture} alt="" /> : user.name[0]}</div></div>
+        </header>
+
+        {active === "Overview" ? <>
+          <section className="welcome-card"><div><p className="kicker light">GOOD MORNING, {user.name.split(" ")[0].toUpperCase()}</p><h2>Your wool is earning<br />what it is worth.</h2><p>Seven verified buyers are competing for batch WT-2408-KAS. The highest offer is 8.4% above your reserve price.</p><button onClick={() => setActive("Reverse bidding")}>Review live offers <ChevronRight /></button></div><div className="welcome-price"><span>Best live offer</span><strong>₹612<small>/kg</small></strong><em>+8.4% above reserve</em></div></section>
+          <section className="metric-grid">
+            <article><span><Boxes /></span><p>Active wool</p><strong>{batches.reduce((sum, b) => sum + b.weight, 0)} kg</strong><small>Across {batches.length} batches</small></article>
+            <article><span><HandCoins /></span><p>Estimated value</p><strong>₹{Math.round(bestValue / 1000)}k</strong><small>At current best offers</small></article>
+            <article><span><BadgeCheck /></span><p>Verified batches</p><strong>2 / {batches.length}</strong><small>One assessment pending</small></article>
+            <article><span><Gauge /></span><p>Market signal</p><strong>Strong</strong><small>Fine wool demand +6.2%</small></article>
+          </section>
+          <section className="dashboard-grid">
+            <article className="panel batch-panel"><div className="panel-head"><div><p className="kicker">MY WOOL</p><h3>Recent batches</h3></div><button className="lime-button" onClick={() => setShowCreate(true)}><PackagePlus /> Add batch</button></div><div className="batch-table"><div className="batch-row head"><span>Batch</span><span>Weight</span><span>Grade</span><span>Status</span><span>Best offer</span></div>{batches.map((batch) => <a href={`/batch/${batch.id}`} className="batch-row" key={batch.id}><span><strong>{batch.id}</strong><small>{batch.breed}</small></span><span>{batch.weight} kg</span><span><b className="grade">{batch.grade}</b></span><span><i className={`status ${batch.status.toLowerCase().replace(" ", "-")}`}>{batch.status}</i></span><span><strong>₹{batch.price}/kg</strong><small>{batch.bids ? `${batch.bids} buyer offers` : "Awaiting assessment"}</small></span></a>)}</div></article>
+            <article className="panel timeline-panel"><div className="panel-head"><div><p className="kicker">LIVE PASSPORT</p><h3>WT-2408-KAS</h3></div><Link href="/batch/WT-2408-KAS"><QrCode /></Link></div><div className="mini-journey">{journey.map(([title, place, time], index) => <div key={title} className={index < 3 ? "done" : ""}><span>{index < 3 ? <ShieldCheck /> : <Truck />}</span><p><strong>{title}</strong><small>{place}</small></p><time>{time}</time></div>)}</div><Link className="text-link" href="/batch/WT-2408-KAS">Open public batch passport <ChevronRight /></Link></article>
+          </section>
+        </> : <ModuleView name={active} onCreate={() => setShowCreate(true)} batches={batches} />}
+      </section>
+
+      {showCreate && <div className="modal-backdrop"><form className="batch-modal" onSubmit={createBatch}><button type="button" className="modal-close" onClick={() => setShowCreate(false)}><X /></button><p className="kicker">NEW DIGITAL PASSPORT</p><h2>Register a wool batch</h2><p>Start the verified history at the point of shearing.</p><label>Breed<input name="breed" required placeholder="e.g. Kashmir Merino" /></label><div className="form-pair"><label>Weight (kg)<input name="weight" required min="1" type="number" /></label><label>Reserve ₹/kg<input name="reserve" required min="0" type="number" /></label></div><label>Shearing date<input name="date" required type="date" /></label><button className="lime-button" type="submit">Create batch & QR <QrCode /></button></form></div>}
+    </main>
+  );
+}
+
+function ModuleView({ name, onCreate, batches }: { name: string; onCreate: () => void; batches: typeof initialBatches }) {
+  const copy: Record<string, [string, string]> = {
+    "My wool": ["Every batch in one place", "Register wool at shearing, maintain quality records and open its public QR passport."],
+    WoolKart: ["Sell directly to verified buyers", "List assessed wool, compare demand and choose the terms that protect your net earnings."],
+    "Reverse bidding": ["Buyers compete. Farmers decide.", "Compare price, pickup time, deductions, payment terms and buyer reliability side by side."],
+    Traceability: ["One passport from farm to fabric", "Every custody, transport, storage and processing event remains linked to the source batch."],
+    Quality: ["Quality proof that travels", "Record micron, staple length, yield, colour, contamination and signed laboratory certificates."],
+    Transport: ["Visible pickup and delivery", "Book verified transport, share custody records and track the current batch location."],
+    Warehouses: ["Find verified storage nearby", "Compare capacity, distance, price, insurance and environmental controls before booking."],
+    Services: ["Support around the farmer", "Book shearers, veterinarians, breeders, assessors, logistics and processors from one directory."],
+    "Market prices": ["Know the market before selling", "Follow grade-wise prices, district demand, historic trends and recommended reserve ranges."],
+  };
+  const [title, text] = copy[name] ?? [name, "WoolTrace module"];
+  return <section className="module-page"><div className="module-hero"><p className="kicker">{name.toUpperCase()}</p><h2>{title}</h2><p>{text}</p><button className="lime-button" onClick={onCreate}>{name === "My wool" ? <><PackagePlus /> Register batch</> : <>Open workflow <ChevronRight /></>}</button></div><div className="module-cards"><article><BadgeCheck /><h3>Verified records</h3><p>Time-stamped updates keep every stakeholder accountable.</p></article><article><ShieldCheck /><h3>Farmer control</h3><p>Nothing changes ownership without a recorded acceptance.</p></article><article><Languages /><h3>Multilingual access</h3><p>Switch the interface between English and Hindi.</p></article></div>{name === "Reverse bidding" && <div className="offer-board"><h3>Live offers for WT-2408-KAS</h3>{[["Himalaya Weaves",612,"Pickup in 2 days"],["North Loom Co.",598,"Same-day payment"],["Kashmir Textiles",584,"Pickup in 1 day"]].map(([buyer,price,term],i)=><div key={String(buyer)}><span>#{i+1}</span><p><strong>{buyer}</strong><small>Verified buyer · {term}</small></p><b>₹{price}/kg</b><button>{i === 0 ? "Accept offer" : "View terms"}</button></div>)}</div>}{name === "My wool" && <div className="module-list">{batches.map(b => <a href={`/batch/${b.id}`} key={b.id}><QrCode /><p><strong>{b.id}</strong><small>{b.breed} · {b.weight} kg · Grade {b.grade}</small></p><ChevronRight /></a>)}</div>}</section>;
+}

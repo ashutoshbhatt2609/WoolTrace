@@ -164,3 +164,29 @@ The page is edge-to-edge at every breakpoint. On laptops, the hero image fills t
 - The login modal is a UI prototype; authentication and OTP delivery are not yet connected.
 - Buyer offers and batch history are representative demo data.
 - The QR graphic is illustrative and must later be replaced with a signed batch verification URL.
+# Product application extension
+
+The marketing landing page remains the public entry point and keeps the approved farmer hero photograph unchanged. The product now extends behind a dedicated authentication screen and a responsive workspace.
+
+## Required product modules
+
+- Role-ready accounts for farmers, buyers, assessors, transporters, warehouses, processors, and administrators.
+- Farmer wool registration with a unique batch ID and QR passport created at shearing.
+- Farm-to-fabric event history covering origin, quality, auction, ownership, transport, storage, processing, yarn, and fabric.
+- WoolKart listings and reverse bidding, with price, pickup, deductions, payment terms, and buyer verification shown together.
+- Quality records for grade, micron, staple length, clean yield, contamination, and downloadable certificates.
+- Transport and warehouse discovery/booking workflows with custody tracking.
+- Services marketplace for shearing, veterinary, breeding, assessment, logistics, and processing.
+- Market intelligence with grade-level prices, demand signals, price history, and reserve guidance.
+- English/Hindi interface switch and a layout designed to extend to additional Indian languages.
+- Public, mobile-friendly QR passport that reveals provenance without exposing private farmer information.
+
+## Authentication and data
+
+Google OAuth uses server-side authorization-code exchange, state validation, signed HTTP-only session cookies, and a 14-day session. Credentials are supplied only as production environment variables: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `AUTH_SECRET`.
+
+The D1 schema contains users, farms, wool batches, batch events, buyer bids, service listings, and bookings. The generated migration is stored in `drizzle/` and the production binding is named `DB`.
+
+## Visual system
+
+The authenticated workspace continues the landing page's deep forest green, warm white, pastel moss, and lime accent. Dense operational information uses compact white panels, restrained status chips, clear typographic hierarchy, and responsive tables. The public batch passport uses the same system so that a QR scan still feels like WoolTrace.

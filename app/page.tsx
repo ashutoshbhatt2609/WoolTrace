@@ -13,22 +13,11 @@ import {
   ScanLine,
   ShieldCheck,
   Sprout,
-  Users,
   X,
 } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 const stats = [
   { value: "1 QR", label: "Complete batch identity", icon: ScanLine },
@@ -97,31 +86,9 @@ function BrandMark() {
 
 function LoginDialog() {
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button className="login-button">
-          Log in <ArrowRight className="size-3.5" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="border-0 bg-[#f7f7f1] p-7 sm:max-w-md sm:rounded-[1.75rem]">
-        <DialogHeader>
-          <div className="mb-3 flex items-center gap-2.5">
-            <BrandMark />
-            <span className="text-lg font-extrabold tracking-[-0.03em]">WoolTrace</span>
-          </div>
-          <DialogTitle className="text-3xl font-semibold tracking-[-0.04em]">Welcome back</DialogTitle>
-          <DialogDescription className="text-base leading-7 text-[#65685f]">Use your registered mobile number to access your WoolTrace account.</DialogDescription>
-        </DialogHeader>
-        <form className="mt-3 space-y-4" onSubmit={(event) => event.preventDefault()}>
-          <div className="space-y-2">
-            <Label htmlFor="mobile">Mobile number</Label>
-            <Input id="mobile" inputMode="tel" placeholder="+91 98765 43210" className="h-12 rounded-xl border-[#d7d8d0] bg-white text-base" />
-          </div>
-          <Button className="h-12 w-full rounded-xl bg-black text-base text-white hover:bg-[#232323]">Continue with OTP <ArrowRight className="size-4" /></Button>
-          <p className="text-center text-sm text-[#73766e]">Farmer, buyer and partner accounts use the same secure login.</p>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <Button asChild className="login-button">
+      <a href="/login">Log in <ArrowRight className="size-3.5" /></a>
+    </Button>
   );
 }
 
