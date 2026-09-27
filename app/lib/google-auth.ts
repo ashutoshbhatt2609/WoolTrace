@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 export type GoogleUser = { sub: string; email: string; name: string; picture?: string };
 export const SESSION_COOKIE = "wooltrace_session";
 export const STATE_COOKIE = "wooltrace_oauth_state";
+export const DEMO_COOKIE = "wooltrace_demo_session";
 
 const encode = (input: Uint8Array | string) => {
   const bytes = typeof input === "string" ? new TextEncoder().encode(input) : input;
@@ -36,7 +37,15 @@ export async function createSession(user: GoogleUser) {
 }
 
 export async function getGoogleUser(): Promise<GoogleUser | null> {
-  const value = (await cookies()).get(SESSION_COOKIE)?.value;
+  const cookieStore = await cookies();
+  if (process.env.DEMO_MODE === "true" && cookieStore.get(DEMO_COOKIE)?.value === "farmer") {
+    return {
+      sub: "demo-farmer",
+      email: "farmer.demo@wooltrace.in",
+      name: "Rafiq Ahmad",
+    };
+  }
+  const value = cookieStore.get(SESSION_COOKIE)?.value;
   if (!value) return null;
   const [payload, supplied] = value.split(".");
   if (!payload || !supplied || (await signature(payload)) !== supplied) return null;
