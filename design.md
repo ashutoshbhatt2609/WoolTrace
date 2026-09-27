@@ -143,7 +143,7 @@ The page is edge-to-edge at every breakpoint. On laptops, the hero image fills t
 
 - Minimum interactive target is approximately 40px; primary buttons are 47-48px tall.
 - Keyboard-visible focus is inherited from the shared UI primitives.
-- Login uses the accessible dialog primitive.
+- Authentication uses a dedicated Google sign-in page with a clearly labelled entry point in the header and mobile menu.
 - Lifecycle controls expose `aria-expanded`.
 - Mobile menu exposes its open state.
 - Reduced-motion preferences disable smooth scrolling and transitions.
@@ -161,7 +161,7 @@ The page is edge-to-edge at every breakpoint. On laptops, the hero image fills t
 
 - The landing page is implemented in `app/page.tsx`.
 - Global tokens and responsive rules live in `app/globals.css`.
-- The login modal is a UI prototype; authentication and OTP delivery are not yet connected.
+- Phone-number and OTP login are not used. Authentication is implemented through Google OAuth with secure server-side session cookies.
 - Buyer offers and batch history are representative demo data.
 - The QR graphic is illustrative and must later be replaced with a signed batch verification URL.
 # Product application extension

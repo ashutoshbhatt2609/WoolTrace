@@ -84,10 +84,13 @@ function BrandMark() {
   );
 }
 
-function LoginDialog() {
+function GoogleLoginButton() {
   return (
     <Button asChild className="login-button">
-      <a href="/login">Log in <ArrowRight className="size-3.5" /></a>
+      <a href="/login" aria-label="Sign in to WoolTrace with Google">
+        <span className="google-button-mark" aria-hidden="true">G</span>
+        Sign in with Google <ArrowRight className="size-3.5" />
+      </a>
     </Button>
   );
 }
@@ -108,7 +111,7 @@ export default function Home() {
               <a href="#journey">Journey</a>
               <a href="#farmers">Farmers</a>
             </nav>
-            <div className="hidden sm:block"><LoginDialog /></div>
+            <div className="hidden sm:block"><GoogleLoginButton /></div>
             <button type="button" className="mobile-menu" aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>
               {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
             </button>
@@ -119,7 +122,7 @@ export default function Home() {
               <a href="#services" onClick={() => setMenuOpen(false)}>Services</a>
               <a href="#journey" onClick={() => setMenuOpen(false)}>Journey</a>
               <a href="#farmers" onClick={() => setMenuOpen(false)}>Farmers</a>
-              <div className="sm:hidden"><LoginDialog /></div>
+              <div className="sm:hidden"><GoogleLoginButton /></div>
             </nav>
           )}
 
@@ -243,7 +246,7 @@ export default function Home() {
 
         <footer className="footer">
           <div className="footer-brand"><div className="brand"><BrandMark /><span>WoolTrace</span></div><p>From farm to fabric, clearly.</p></div>
-          <div className="footer-links"><div><strong>Explore</strong><a href="#services">Services</a><a href="#journey">Journey</a></div><div><strong>Platform</strong><a href="#farmers">For farmers</a><a href="#home">Log in</a></div></div>
+          <div className="footer-links"><div><strong>Explore</strong><a href="#services">Services</a><a href="#journey">Journey</a></div><div><strong>Platform</strong><a href="#farmers">For farmers</a><a href="/login">Google sign-in</a></div></div>
           <div className="photo-sources" aria-label="Photography credits">
             <span>Photography:</span>
             <a href="https://www.pexels.com/photo/focused-farmers-shearing-sheep-in-barn-5490730/" target="_blank" rel="noreferrer">Rachel Claire</a>
