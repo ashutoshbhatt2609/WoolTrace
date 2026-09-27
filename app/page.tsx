@@ -2,262 +2,89 @@
 
 import Image from "next/image";
 import {
-  ArrowRight,
-  BadgeCheck,
-  ChartNoAxesCombined,
-  ChevronDown,
-  HandCoins,
-  Languages,
-  Menu,
-  PackageCheck,
-  ScanLine,
-  ShieldCheck,
-  Sprout,
-  X,
+  ArrowRight, BadgeCheck, BarChart3, Boxes, CheckCircle2, ChevronRight,
+  Globe2, HandCoins, Languages, Menu, PackageCheck, QrCode, ShieldCheck,
+  Sprout, Truck, Warehouse, X,
 } from "lucide-react";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
-
-const stats = [
-  { value: "1 QR", label: "Complete batch identity", icon: ScanLine },
-  { value: "6 stages", label: "Farm-to-fabric journey", icon: PackageCheck },
-  { value: "100%", label: "Auditable hand-offs", icon: ShieldCheck },
-  { value: "₹ direct", label: "Competitive buyer offers", icon: HandCoins },
+const journey = [
+  { number: "01", title: "Register the shearing", text: "Create a digital batch with the farm, breed, date and weight recorded at source.", icon: Boxes },
+  { number: "02", title: "Verify wool quality", text: "Attach grade, micron, staple length, yield and the assessor’s signed certificate.", icon: BadgeCheck },
+  { number: "03", title: "Invite buyer offers", text: "Verified buyers compete on price, pickup time, deductions and payment terms.", icon: HandCoins },
+  { number: "04", title: "Track every hand-off", text: "Transport, storage, processing, yarn and fabric stay linked to the source batch.", icon: PackageCheck },
 ];
 
-const services = [
-  {
-    title: "Batch traceability",
-    text: "Create a permanent digital identity at shearing and keep every quality, ownership and processing event connected.",
-    image: "https://images.pexels.com/photos/5490730/pexels-photo-5490730.jpeg?auto=compress&cs=tinysrgb&w=1600",
-    alt: "Farm workers shearing a sheep in a working barn",
-    caption: "Shearing recorded at source",
-  },
-  {
-    title: "Direct buyer offers",
-    text: "Invite verified buyers to compete for a batch, compare real net earnings and accept only the terms that work.",
-    image: "https://commons.wikimedia.org/wiki/Special:Redirect/file/CSIRO_ScienceImage_2403_Classifying_Wool.jpg?width=1600",
-    alt: "Wool fibres being sorted and graded by hand",
-    caption: "Quality checked before sale",
-  },
-  {
-    title: "Farmer support network",
-    text: "Find assessors, transporters, warehouses and processors without losing sight of the batch or the farmer.",
-    image: "https://images.unsplash.com/photo-1759738099669-d64b0656f6cf?auto=format&fit=crop&w=1600&q=82",
-    alt: "Textile workers weaving fabric on a traditional loom in Assam",
-    caption: "Processing linked to the batch",
-  },
-];
+const capabilities = [
+  [QrCode, "QR wool passports", "One scan shows origin, quality, ownership and the complete chain of custody."],
+  [HandCoins, "Reverse bidding", "Farmers compare competing offers and accept the best net value on their own terms."],
+  [Truck, "Connected logistics", "Book transport and storage without losing visibility of the batch."],
+  [BarChart3, "Market intelligence", "See grade-wise prices, local demand and a practical reserve-price range."],
+] as const;
 
-const steps = [
-  {
-    title: "Register the shearing",
-    text: "The farmer records the farm, flock, breed, shearing date and initial weight. WoolTrace creates the batch ID and QR label.",
-  },
-  {
-    title: "Verify quality and ownership",
-    text: "Assessment results, grade and certificates attach to the batch. Ownership and custody remain separate and visible.",
-  },
-  {
-    title: "Receive competitive offers",
-    text: "Verified buyers submit offers. The farmer compares price, pickup, deductions and buyer reliability before deciding.",
-  },
-  {
-    title: "Follow every transformation",
-    text: "Transport, storage, processing and derived yarn or fabric stay linked to the original source batch.",
-  },
-];
-
-const benefits = [
-  { icon: ChartNoAxesCombined, label: "Clear market intelligence" },
-  { icon: HandCoins, label: "Farmer-controlled selling" },
-  { icon: BadgeCheck, label: "Verified quality records" },
-  { icon: Languages, label: "Local-language access" },
-];
-
-function BrandMark() {
-  return (
-    <span className="brand-mark" aria-hidden="true">
-      <Sprout className="size-4" strokeWidth={2.6} />
-    </span>
-  );
-}
-
-function GoogleLoginButton() {
-  return (
-    <Button asChild className="login-button">
-      <a href="/login" aria-label="Sign in to WoolTrace with Google">
-        <span className="google-button-mark" aria-hidden="true">G</span>
-        Sign in with Google <ArrowRight className="size-3.5" />
-      </a>
-    </Button>
-  );
+function Mark() {
+  return <span className="khet-mark"><Sprout aria-hidden="true" /></span>;
 }
 
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [activeStep, setActiveStep] = useState(0);
+  const [language, setLanguage] = useState("English");
 
   return (
-    <main className="site-canvas">
-      <div className="site-frame">
-        <section id="home" className="hero-wrap">
-          <header className="topbar">
-            <a href="#home" className="brand" aria-label="WoolTrace home"><BrandMark /><span>WoolTrace</span></a>
-            <nav className="nav-pill" aria-label="Main navigation">
-              <a href="#home" className="active">Home</a>
-              <a href="#services">Services</a>
-              <a href="#journey">Journey</a>
-              <a href="#farmers">Farmers</a>
-            </nav>
-            <div className="hidden sm:block"><GoogleLoginButton /></div>
-            <button type="button" className="mobile-menu" aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>
-              {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
-            </button>
-          </header>
+    <main className="khet-page">
+      <header className="khet-topbar">
+        <a href="#home" className="khet-brand" aria-label="WoolTrace home"><Mark /><strong>WOOLTRACE</strong></a>
+        <nav className="khet-nav" aria-label="Main navigation">
+          <a href="#how">How it works</a><a href="#platform">Platform</a><a href="#trust">Trust centre</a>
+        </nav>
+        <div className="khet-header-actions">
+          <label className="khet-language"><Languages aria-hidden="true" /><span className="sr-only">Translate page</span><select value={language} onChange={(event) => setLanguage(event.target.value)} aria-label="Translate page"><option>English</option><option>हिंदी</option><option>ಕನ್ನಡ</option><option>தமிழ்</option><option>తెలుగు</option><option>मराठी</option><option>ਪੰਜਾਬੀ</option></select></label>
+          <a className="khet-signin" href="/login">Sign in with Google</a>
+          <a className="khet-open" href="/dashboard">Open platform <ArrowRight /></a>
+        </div>
+        <button className="khet-menu" type="button" aria-expanded={menuOpen} aria-label="Toggle menu" onClick={() => setMenuOpen((open) => !open)}>{menuOpen ? <X /> : <Menu />}</button>
+      </header>
 
-          {menuOpen && (
-            <nav className="mobile-nav" aria-label="Mobile navigation">
-              <a href="#services" onClick={() => setMenuOpen(false)}>Services</a>
-              <a href="#journey" onClick={() => setMenuOpen(false)}>Journey</a>
-              <a href="#farmers" onClick={() => setMenuOpen(false)}>Farmers</a>
-              <div className="sm:hidden"><GoogleLoginButton /></div>
-            </nav>
-          )}
+      {menuOpen && <nav className="khet-mobile-nav"><a href="#how" onClick={() => setMenuOpen(false)}>How it works</a><a href="#platform" onClick={() => setMenuOpen(false)}>Platform</a><a href="#trust" onClick={() => setMenuOpen(false)}>Trust centre</a><a href="/login">Sign in with Google</a><a className="khet-open" href="/dashboard">Open platform <ArrowRight /></a></nav>}
 
-          <div className="hero-media">
-            <Image src="/wooltrace-hero.png" alt="Indian wool farmer holding freshly shorn wool beside a flock of sheep" fill priority sizes="(max-width: 1280px) 94vw, 1180px" className="object-cover" />
-            <div className="hero-overlay" aria-hidden="true" />
-            <div className="hero-content">
-              <p className="hero-eyebrow"><span /> Farmer-first traceability</p>
-              <h1>Every fibre tells<br />the farmer&apos;s story</h1>
-              <p>Track wool from shearing to fabric, prove its quality and let verified buyers compete directly for every batch.</p>
-              <Button asChild className="hero-cta"><a href="#journey">See the full journey <ArrowRight className="size-4" /></a></Button>
-            </div>
-            <div className="hero-badge"><BadgeCheck className="size-4" /><span>Batch history verified</span></div>
-          </div>
-        </section>
+      <section id="home" className="khet-hero">
+        <div className="khet-hero-copy">
+          <div className="khet-chip"><span /> Farmer-first wool intelligence</div>
+          <h1>Know your wool.<br /><em>Sell with confidence.</em></h1>
+          <p>WoolTrace gives every batch a verified identity, connects farmers directly with trusted buyers, and keeps the whole journey visible from shearing to fabric.</p>
+          <div className="khet-hero-actions"><a className="khet-primary" href="/dashboard">Explore WoolTrace <ArrowRight /></a><a className="khet-secondary" href="#how">See how it works <ChevronRight /></a></div>
+          <div className="khet-proof"><div className="khet-avatars"><span>R</span><span>S</span><span>A</span><span>+</span></div><p><strong>Built with farmers at the centre</strong><small>Farmers · buyers · assessors · processors</small></p></div>
+        </div>
+        <div className="khet-visual">
+          <div className="khet-photo-card"><Image src="/wooltrace-hero.png" alt="Indian wool farmer holding freshly shorn wool beside sheep" fill priority sizes="(max-width: 900px) 92vw, 46vw" className="object-cover" /><div className="khet-photo-label"><ShieldCheck /><div><strong>Origin verified</strong><span>Gulmarg · Kashmir Merino</span></div></div></div>
+          <article className="khet-signal-card"><span>Today’s market signal</span><strong>Strong demand</strong><p><b>↑ 8.4%</b> above reserve</p><div className="signal-bars"><i /><i /><i /><i /></div></article>
+          <article className="khet-buyer-card"><span><BadgeCheck /> Buyer match found</span><strong>Himalaya Weaves</strong><p>96% batch-fit score</p><div><b>₹612/kg</b><small>Pickup in 2 days</small></div></article>
+          <span className="khet-orbit orbit-one" /><span className="khet-orbit orbit-two" />
+        </div>
+      </section>
 
-        <section className="section-block trust-section">
-          <div className="section-heading left-heading">
-            <p className="kicker">One connected platform</p>
-            <h2>Built for trust at every hand-off</h2>
-            <p>Farmers keep control while buyers and partners work from the same verified batch record.</p>
-          </div>
-          <div className="stats-grid">
-            {stats.map(({ value, label, icon: Icon }) => (
-              <article key={label} className="stat-card"><Icon className="size-5" /><div><strong>{value}</strong><span>{label}</span></div></article>
-            ))}
-          </div>
-        </section>
+      <section className="khet-metrics" aria-label="WoolTrace platform metrics"><div><strong>₹612/kg</strong><span>best live offer</span></div><div><strong>184 kg</strong><span>verified batch</span></div><div><strong>7</strong><span>competing buyers</span></div><div><strong>6 stages</strong><span>farm-to-fabric trail</span></div></section>
 
-        <section id="services" className="section-block">
-          <div className="section-heading left-heading">
-            <p className="kicker">Farmer services</p>
-            <h2>Useful tools, not extra paperwork</h2>
-            <p>Simple mobile-first workflows help farmers protect their wool&apos;s value and reach the right people.</p>
-          </div>
-          <div className="service-grid">
-            {services.map(({ title, text, image, alt, caption }, index) => (
-              <article key={title} className="service-card">
-                <div className="service-visual">
-                  <img className="section-photo" src={image} alt={alt} loading="lazy" />
-                  <span className="image-caption">{caption}</span>
-                </div>
-                <div className="service-copy"><div className="service-number">0{index + 1}</div><h3>{title}</h3><p>{text}</p></div>
-              </article>
-            ))}
-          </div>
-        </section>
+      <section id="how" className="khet-section khet-how">
+        <div className="khet-section-heading"><div><span className="khet-eyebrow">One connected wool journey</span><h2>Less uncertainty.<br />More bargaining power.</h2></div><p>Every record, service and sale comes together in one farmer-first workflow. Useful partners stay connected, while unnecessary trading layers disappear.</p></div>
+        <div className="khet-steps">{journey.map(({ number, title, text, icon: Icon }) => <article key={number}><div><span>{number}</span><Icon /></div><h3>{title}</h3><p>{text}</p><a href="/dashboard">Open workflow <ChevronRight /></a></article>)}</div>
+      </section>
 
-        <section id="journey" className="section-block journey-section">
-          <div className="section-heading left-heading">
-            <p className="kicker">The wool lifecycle</p>
-            <h2>From shearing to finished fabric</h2>
-            <p>Each stage adds a clear, time-stamped record to one permanent batch passport.</p>
-          </div>
-          <div className="journey-layout">
-            <div className="journey-image">
-              <img className="section-photo" src="https://images.pexels.com/photos/15884856/pexels-photo-15884856.jpeg?auto=compress&cs=tinysrgb&w=1600" alt="A flock of wool sheep gathered on a working farm" loading="lazy" />
-              <div className="journey-chip"><ScanLine className="size-5" /><div><strong>WT-2408</strong><span>Scan-ready batch</span></div></div>
-            </div>
-            <div className="step-list">
-              {steps.map((step, index) => (
-                <article key={step.title} className={`step-item ${activeStep === index ? "open" : ""}`}>
-                  <button type="button" onClick={() => setActiveStep(index)} aria-expanded={activeStep === index}>
-                    <span className="step-count">{index + 1}</span><span>{step.title}</span><ChevronDown className="size-4" />
-                  </button>
-                  {activeStep === index && <p>{step.text}</p>}
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
+      <section id="platform" className="khet-platform">
+        <div className="khet-platform-copy"><span className="khet-eyebrow light">Made for farmer ownership</span><h2>Your wool business,<br />all in one place.</h2><p>Register batches, book assessments, compare buyer offers, arrange pickup and show customers exactly where their fibre began.</p><a className="khet-primary" href="/dashboard">View farmer workspace <ArrowRight /></a><div className="khet-checks"><p><CheckCircle2 /> Keep ownership visible</p><p><CheckCircle2 /> Compare true net earnings</p><p><CheckCircle2 /> Share verified batch history</p></div></div>
+        <div className="khet-workspace-card"><div className="workspace-top"><div><span>ACTIVE BATCH</span><strong>WT-2408-KAS</strong></div><QrCode /></div><div className="workspace-quality"><span><small>Grade</small><b>A</b></span><span><small>Micron</small><b>20.4</b></span><span><small>Weight</small><b>184 kg</b></span></div><div className="workspace-offer"><div><small>Leading offer</small><strong>₹612<em>/kg</em></strong></div><span>7 verified bids</span></div><div className="workspace-route"><span className="done"><CheckCircle2 /></span><i /><span className="done"><BadgeCheck /></span><i /><span className="active"><HandCoins /></span><i /><span><Truck /></span></div><div className="workspace-labels"><span>Sheared</span><span>Graded</span><span>Auction</span><span>Pickup</span></div></div>
+      </section>
 
-        <section className="benefit-band">
-          <div className="section-heading left-heading compact">
-            <p className="kicker">Why farmers use WoolTrace</p>
-            <h2>Better information. Stronger decisions.</h2>
-          </div>
-          <div className="benefit-grid">
-            {benefits.map(({ icon: Icon, label }) => (<div key={label} className="benefit-item"><Icon className="size-7" /><span>{label}</span></div>))}
-          </div>
-        </section>
+      <section className="khet-section khet-capabilities">
+        <div className="khet-section-heading"><div><span className="khet-eyebrow">Built around the batch</span><h2>Everything farmers need<br />to protect wool’s value.</h2></div><p>Operational tools stay simple on mobile, while each verified update strengthens the public wool passport.</p></div>
+        <div className="khet-cap-grid">{capabilities.map(([Icon, title, text]) => <article key={title}><Icon /><h3>{title}</h3><p>{text}</p></article>)}</div>
+      </section>
 
-        <section id="farmers" className="section-block farmer-stories">
-          <div className="section-heading left-heading">
-            <p className="kicker">Designed around real farmers</p>
-            <h2>The farmer stays in control</h2>
-            <p>WoolTrace does not remove useful services. It makes every service, deduction and hand-off visible.</p>
-          </div>
-          <div className="story-grid">
-            <article className="quote-card">
-              <div className="farmer-avatar"><img className="section-photo" src="https://images.pexels.com/photos/5933416/pexels-photo-5933416.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="Indian farmer standing outdoors" loading="lazy" /></div>
-              <div><p className="quote">“I can show where my wool came from, compare buyer terms and decide when the offer is right.”</p><strong>Farmer journey</strong><span>Shearing → quality → direct sale</span></div>
-            </article>
-            <article className="offer-card">
-              <div className="offer-top"><div><span>Live buyer offers</span><strong>Batch WT-2408</strong></div><span className="offer-status">3 verified</span></div>
-              {[["GreenWeave Mills", "₹62,800", true], ["Kaveri Textiles", "₹61,900", false], ["Natural Loom Co.", "₹60,750", false]].map(([buyer, amount, best]) => (
-                <div className={`offer-row ${best ? "best" : ""}`} key={String(buyer)}><div><strong>{String(buyer)}</strong><span>{best ? "Pickup included · best net value" : "Verified buyer offer"}</span></div><b>{String(amount)}</b></div>
-              ))}
-            </article>
-          </div>
-        </section>
+      <section id="trust" className="khet-trust">
+        <div><span className="khet-eyebrow light">Verified. Transparent. Accountable.</span><h2>A more dependable wool economy.</h2><p>Farmer identity, laboratory quality, buyer credentials, logistics status and every ownership milestone appear in one shared record.</p></div><div className="khet-trust-grid"><article><ShieldCheck /><strong>Signed events</strong><span>Every update belongs to a verified stakeholder.</span></article><article><Warehouse /><strong>Visible custody</strong><span>Storage and transport never break the batch history.</span></article><article><Globe2 /><strong>Public proof</strong><span>Anyone can scan the QR without seeing private farm data.</span></article></div>
+      </section>
 
-        <section className="qr-section">
-          <div>
-            <p className="kicker light">The public wool passport</p>
-            <h2>Scan once. See the whole life.</h2>
-            <p>No app required. A phone camera opens the origin, quality certificate, sale, transport, storage and processing trail—without exposing private farmer data.</p>
-          </div>
-          <div className="qr-card">
-            <div className="fake-qr" aria-hidden="true"><span /><span /><span /><ScanLine className="size-10" /></div>
-            <div><span>Verified wool batch</span><strong>WT-2408</strong><p>Koppal, Karnataka · Fine grade A</p></div>
-            <BadgeCheck className="size-7" />
-          </div>
-        </section>
-
-        <section className="cta-panel">
-          <img className="section-photo" src="https://images.pexels.com/photos/5660232/pexels-photo-5660232.jpeg?auto=compress&cs=tinysrgb&w=1600" alt="Hands holding a skein of natural wool yarn" loading="lazy" />
-          <div className="cta-overlay" aria-hidden="true" />
-          <div className="cta-content"><p className="kicker light">A clearer wool economy</p><h2>Grow with WoolTrace</h2><p>Give every batch a history, every farmer a stronger voice and every buyer proof they can trust.</p><Button asChild><a href="#home">Start with the journey <ArrowRight className="size-4" /></a></Button></div>
-        </section>
-
-        <footer className="footer">
-          <div className="footer-brand"><div className="brand"><BrandMark /><span>WoolTrace</span></div><p>From farm to fabric, clearly.</p></div>
-          <div className="footer-links"><div><strong>Explore</strong><a href="#services">Services</a><a href="#journey">Journey</a></div><div><strong>Platform</strong><a href="#farmers">For farmers</a><a href="/login">Google sign-in</a></div></div>
-          <div className="photo-sources" aria-label="Photography credits">
-            <span>Photography:</span>
-            <a href="https://www.pexels.com/photo/focused-farmers-shearing-sheep-in-barn-5490730/" target="_blank" rel="noreferrer">Rachel Claire</a>
-            <a href="https://commons.wikimedia.org/wiki/File:CSIRO_ScienceImage_2403_Classifying_Wool.jpg" target="_blank" rel="noreferrer">CSIRO</a>
-            <a href="https://unsplash.com/photos/people-weaving-fabric-on-a-loom-in-a-rustic-setting-lfB03HDIdOs" target="_blank" rel="noreferrer">Rohit Dey</a>
-            <a href="https://www.pexels.com/photo/sheep-on-farm-15884856/" target="_blank" rel="noreferrer">Orhan Akbaba</a>
-            <a href="https://www.pexels.com/photo/indian-farmer-with-mustache-5933416/" target="_blank" rel="noreferrer">Mohan Nannapaneni</a>
-          </div>
-          <p className="copyright">© 2026 WoolTrace</p>
-        </footer>
-      </div>
+      <footer className="khet-footer"><div><a href="#home" className="khet-brand"><Mark /><strong>WOOLTRACE</strong></a><p>Farm-to-fabric traceability and direct wool commerce for Indian farmers.</p></div><div><strong>PLATFORM</strong><a href="#how">How it works</a><a href="#platform">Farmer workspace</a><a href="#trust">Trust centre</a></div><div><strong>ACCESS</strong><a href="/login">Google sign-in</a><a href="/dashboard">Open platform</a><a href="/batch/WT-2408-KAS">Sample passport</a></div><div><strong>LANGUAGES</strong><p>English · हिंदी · ಕನ್ನಡ<br />தமிழ் · తెలుగు · मराठी</p></div><small>© 2026 WoolTrace · From farm to fabric, clearly.</small></footer>
     </main>
   );
 }
