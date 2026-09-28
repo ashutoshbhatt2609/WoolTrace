@@ -47,7 +47,10 @@ export default function DashboardClient({ user }: { user: GoogleUser }) {
   const [liveError, setLiveError] = useState("");
   const [saveError, setSaveError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [popover, setPopover] = useState<"notifications" | "settings" | null>(null);
   const bestValue = useMemo(() => batches.reduce((sum, batch) => sum + batch.weight * batch.price, 0), [batches]);
+  const visibleBatches = useMemo(() => batches.filter((batch) => `${batch.id} ${batch.breed} ${batch.status}`.toLowerCase().includes(search.toLowerCase())), [batches, search]);
 
   useEffect(() => {
     let mounted = true;
@@ -68,6 +71,12 @@ export default function DashboardClient({ user }: { user: GoogleUser }) {
     void loadLiveData();
     const timer = window.setInterval(loadLiveData, 60_000);
     return () => { mounted = false; window.clearInterval(timer); };
+  }, []);
+
+  useEffect(() => {
+    const requested = window.location.hash.slice(1).replace(/-/g, " ");
+    const match = modules.find(([label]) => label.toLowerCase() === requested.toLowerCase());
+    if (match) setActive(match[0]);
   }, []);
 
   async function createBatch(event: React.FormEvent<HTMLFormElement>) {
@@ -98,14 +107,14 @@ export default function DashboardClient({ user }: { user: GoogleUser }) {
         <div className="app-logo"><span className="brand-mark"><Sprout className="size-4" /></span><span>WoolTrace</span><button onClick={() => setMobile(false)}><X /></button></div>
         <p className="side-label">WORKSPACE</p>
         <nav>{modules.map(([label, Icon]) => <button className={active === label ? "active" : ""} key={label} onClick={() => { setActive(label); setMobile(false); }}><Icon /><span>{label}</span>{label === "Reverse bidding" && <b>7</b>}</button>)}</nav>
-        <div className="side-bottom"><Link href="/portals"><UsersRound /> Switch portal</Link><button><Settings /> Settings</button><a href="/api/auth/logout"><LogOut /> Sign out</a></div>
+        <div className="side-bottom"><Link href="/portals"><UsersRound /> Switch portal</Link><button onClick={() => setPopover("settings")}><Settings /> Settings</button><a href="/api/auth/logout"><LogOut /> Sign out</a></div>
       </aside>
 
       <section className="app-main">
         <header className="app-header">
           <button className="app-menu" onClick={() => setMobile(true)}><Menu /></button>
           <div><p className="kicker">FARMER WORKSPACE</p><h1>{active}</h1></div>
-          <div className="app-actions"><label><Search /><input placeholder="Search batches" /></label><Link className="portal-switch" href="/portals"><UsersRound /> Portals</Link><button className="icon-button"><Bell /></button><button className="language" onClick={() => setLanguage(language === "English" ? "हिन्दी" : "English")}><Languages /> {language}</button><div className="avatar">{user.picture ? <img src={user.picture} alt="" /> : user.name[0]}</div></div>
+          <div className="app-actions"><label><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search batches" /></label><Link className="portal-switch" href="/portals"><UsersRound /> Portals</Link><button className="icon-button" aria-label="Notifications" onClick={() => setPopover(popover === "notifications" ? null : "notifications")}><Bell /></button><button className="language" onClick={() => setLanguage(language === "English" ? "हिन्दी" : "English")}><Languages /> {language}</button><div className="avatar">{user.picture ? <img src={user.picture} alt="" /> : user.name[0]}</div>{popover === "notifications" && <div className="app-popover"><strong>Notifications</strong><p>Weather and traceability data are connected.</p><p>Demo batch WT-2408-KAS has 7 sample offers.</p><button onClick={() => setPopover(null)}>Mark as read</button></div>}</div>
         </header>
 
         {active === "Overview" ? <>
@@ -123,12 +132,13 @@ export default function DashboardClient({ user }: { user: GoogleUser }) {
             <article><span><Gauge /></span><p>Connected APIs</p><strong>{live ? `${live.liveCount}/${live.totalCount}` : "—"}</strong><small>{liveError || "Weather, records and providers"}</small></article>
           </section>
           <section className="dashboard-grid">
-            <article className="panel batch-panel"><div className="panel-head"><div><p className="kicker">MY WOOL</p><h3>Recent batches</h3></div><button className="lime-button" onClick={() => setShowCreate(true)}><PackagePlus /> Add batch</button></div><div className="batch-table"><div className="batch-row head"><span>Batch</span><span>Weight</span><span>Grade</span><span>Status</span><span>Reserve / offer</span></div>{batches.map((batch) => <a href={`/batch/${batch.id}`} className="batch-row" key={batch.id}><span><strong>{batch.id}</strong><small>{batch.breed} · {batch.source === "live" ? "Saved record" : "Demo data"}</small></span><span>{batch.weight} kg</span><span><b className="grade">{batch.grade}</b></span><span><i className={`status ${batch.status.toLowerCase().replace(" ", "-")}`}>{batch.status}</i></span><span><strong>₹{batch.price}/kg</strong><small>{batch.bids ? `${batch.bids} demo buyer offers` : "Awaiting assessment"}</small></span></a>)}</div></article>
+            <article className="panel batch-panel"><div className="panel-head"><div><p className="kicker">MY WOOL</p><h3>{search ? `Search results (${visibleBatches.length})` : "Recent batches"}</h3></div><button className="lime-button" onClick={() => setShowCreate(true)}><PackagePlus /> Add batch</button></div><div className="batch-table"><div className="batch-row head"><span>Batch</span><span>Weight</span><span>Grade</span><span>Status</span><span>Reserve / offer</span></div>{visibleBatches.map((batch) => <a href={`/batch/${batch.id}`} className="batch-row" key={batch.id}><span><strong>{batch.id}</strong><small>{batch.breed} · {batch.source === "live" ? "Saved record" : "Demo data"}</small></span><span>{batch.weight} kg</span><span><b className="grade">{batch.grade}</b></span><span><i className={`status ${batch.status.toLowerCase().replace(" ", "-")}`}>{batch.status}</i></span><span><strong>₹{batch.price}/kg</strong><small>{batch.bids ? `${batch.bids} demo buyer offers` : "Awaiting assessment"}</small></span></a>)}{!visibleBatches.length && <p className="empty-search">No batches match “{search}”.</p>}</div></article>
             <article className="panel timeline-panel"><div className="panel-head"><div><p className="kicker">LIVE PASSPORT</p><h3>WT-2408-KAS</h3></div><Link href="/batch/WT-2408-KAS"><QrCode /></Link></div><div className="mini-journey">{journey.map(([title, place, time], index) => <div key={title} className={index < 3 ? "done" : ""}><span>{index < 3 ? <ShieldCheck /> : <Truck />}</span><p><strong>{title}</strong><small>{place}</small></p><time>{time}</time></div>)}</div><Link className="text-link" href="/batch/WT-2408-KAS">Open public batch passport <ChevronRight /></Link></article>
           </section>
         </> : <ModuleView name={active} onCreate={() => setShowCreate(true)} batches={batches} />}
       </section>
 
+      {popover === "settings" && <div className="modal-backdrop"><div className="portal-modal"><button className="modal-close" onClick={() => setPopover(null)}><X /></button><Settings /><p className="kicker">WORKSPACE SETTINGS</p><h2>Your preferences</h2><p>Choose the interface language or move to another stakeholder portal.</p><label>Language<select value={language} onChange={(event) => setLanguage(event.target.value)}><option>English</option><option>हिन्दी</option></select></label><Link className="lime-button settings-link" href="/portals"><UsersRound /> Choose portal</Link></div></div>}
       {showCreate && <div className="modal-backdrop"><form className="batch-modal" onSubmit={createBatch}><button type="button" className="modal-close" onClick={() => setShowCreate(false)}><X /></button><p className="kicker">NEW DIGITAL PASSPORT</p><h2>Register a wool batch</h2><p>Start the verified history at the point of shearing. This record is saved securely to WoolTrace.</p><label>Breed<input name="breed" required placeholder="e.g. Kashmir Merino" /></label><div className="form-pair"><label>Weight (kg)<input name="weight" required min="1" type="number" /></label><label>Reserve ₹/kg<input name="reserve" required min="0" type="number" /></label></div><label>Shearing date<input name="date" required type="date" /></label>{saveError && <p className="form-error">{saveError}</p>}<button className="lime-button" type="submit" disabled={isSaving}>{isSaving ? "Saving batch…" : "Create batch & QR"} <QrCode /></button></form></div>}
     </main>
   );
@@ -147,5 +157,6 @@ function ModuleView({ name, onCreate, batches }: { name: string; onCreate: () =>
     "Market prices": ["Know the market before selling", "Follow grade-wise prices, district demand, historic trends and recommended reserve ranges."],
   };
   const [title, text] = copy[name] ?? [name, "WoolTrace module"];
-  return <section className="module-page"><div className="module-hero"><p className="kicker">{name.toUpperCase()}</p><h2>{title}</h2><p>{text}</p><button className="lime-button" onClick={onCreate}>{name === "My wool" ? <><PackagePlus /> Register batch</> : <>Open workflow <ChevronRight /></>}</button></div><div className="module-cards"><article><BadgeCheck /><h3>Verified records</h3><p>Time-stamped updates keep every stakeholder accountable.</p></article><article><ShieldCheck /><h3>Farmer control</h3><p>Nothing changes ownership without a recorded acceptance.</p></article><article><Languages /><h3>Multilingual access</h3><p>Switch the interface between English and Hindi.</p></article></div>{name === "Reverse bidding" && <div className="offer-board"><h3>Demo offers for WT-2408-KAS</h3>{[["Himalaya Weaves",612,"Pickup in 2 days"],["North Loom Co.",598,"Same-day payment"],["Kashmir Textiles",584,"Pickup in 1 day"]].map(([buyer,price,term],i)=><div key={String(buyer)}><span>#{i+1}</span><p><strong>{buyer}</strong><small>Demo buyer · {term}</small></p><b>₹{price}/kg</b><button>{i === 0 ? "Review demo" : "View terms"}</button></div>)}</div>}{name === "My wool" && <div className="module-list">{batches.map(b => <a href={`/batch/${b.id}`} key={b.id}><QrCode /><p><strong>{b.id}</strong><small>{b.breed} · {b.weight} kg · Grade {b.grade} · {b.source === "live" ? "Saved" : "Demo"}</small></p><ChevronRight /></a>)}</div>}</section>;
+  const workflowLinks: Record<string, string> = { WoolKart: "/portal/buyer", "Reverse bidding": "/portal/buyer", Traceability: "/batch/WT-2408-KAS", Quality: "/portal/laboratory", Transport: "/portal/transporter", Warehouses: "/portal/warehouse", Services: "/portals", "Market prices": "/dashboard" };
+  return <section className="module-page"><div className="module-hero"><p className="kicker">{name.toUpperCase()}</p><h2>{title}</h2><p>{text}</p>{name === "My wool" ? <button className="lime-button" onClick={onCreate}><PackagePlus /> Register batch</button> : <Link className="lime-button" href={workflowLinks[name] ?? "/portals"}>Open workflow <ChevronRight /></Link>}</div><div className="module-cards"><article><BadgeCheck /><h3>Verified records</h3><p>Time-stamped updates keep every stakeholder accountable.</p></article><article><ShieldCheck /><h3>Farmer control</h3><p>Nothing changes ownership without a recorded acceptance.</p></article><article><Languages /><h3>Multilingual access</h3><p>Switch the interface between English and Hindi.</p></article></div>{name === "Reverse bidding" && <div className="offer-board"><h3>Demo offers for WT-2408-KAS</h3>{[["Himalaya Weaves",612,"Pickup in 2 days"],["North Loom Co.",598,"Same-day payment"],["Kashmir Textiles",584,"Pickup in 1 day"]].map(([buyer,price,term],i)=><div key={String(buyer)}><span>#{i+1}</span><p><strong>{buyer}</strong><small>Demo buyer · {term}</small></p><b>₹{price}/kg</b><Link href="/portal/buyer">{i === 0 ? "Review demo" : "View terms"}</Link></div>)}</div>}{name === "My wool" && <div className="module-list">{batches.map(b => <a href={`/batch/${b.id}`} key={b.id}><QrCode /><p><strong>{b.id}</strong><small>{b.breed} · {b.weight} kg · Grade {b.grade} · {b.source === "live" ? "Saved" : "Demo"}</small></p><ChevronRight /></a>)}</div>}</section>;
 }
