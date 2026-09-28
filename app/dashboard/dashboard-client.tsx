@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   BadgeCheck, BarChart3, Bell, Boxes, ChevronRight, ClipboardCheck, Gauge,
   HandCoins, Languages, LayoutDashboard, LogOut, Menu, PackagePlus, QrCode,
-  Search, Settings, ShieldCheck, Sprout, Store, Truck, Warehouse, X,
+  Search, Settings, ShieldCheck, Sprout, Store, Truck, UsersRound, Warehouse, X,
 } from "lucide-react";
 import type { GoogleUser } from "@/app/lib/google-auth";
 
@@ -98,14 +98,14 @@ export default function DashboardClient({ user }: { user: GoogleUser }) {
         <div className="app-logo"><span className="brand-mark"><Sprout className="size-4" /></span><span>WoolTrace</span><button onClick={() => setMobile(false)}><X /></button></div>
         <p className="side-label">WORKSPACE</p>
         <nav>{modules.map(([label, Icon]) => <button className={active === label ? "active" : ""} key={label} onClick={() => { setActive(label); setMobile(false); }}><Icon /><span>{label}</span>{label === "Reverse bidding" && <b>7</b>}</button>)}</nav>
-        <div className="side-bottom"><button><Settings /> Settings</button><a href="/api/auth/logout"><LogOut /> Sign out</a></div>
+        <div className="side-bottom"><Link href="/portals"><UsersRound /> Switch portal</Link><button><Settings /> Settings</button><a href="/api/auth/logout"><LogOut /> Sign out</a></div>
       </aside>
 
       <section className="app-main">
         <header className="app-header">
           <button className="app-menu" onClick={() => setMobile(true)}><Menu /></button>
           <div><p className="kicker">FARMER WORKSPACE</p><h1>{active}</h1></div>
-          <div className="app-actions"><label><Search /><input placeholder="Search batches" /></label><button className="icon-button"><Bell /></button><button className="language" onClick={() => setLanguage(language === "English" ? "हिन्दी" : "English")}><Languages /> {language}</button><div className="avatar">{user.picture ? <img src={user.picture} alt="" /> : user.name[0]}</div></div>
+          <div className="app-actions"><label><Search /><input placeholder="Search batches" /></label><Link className="portal-switch" href="/portals"><UsersRound /> Portals</Link><button className="icon-button"><Bell /></button><button className="language" onClick={() => setLanguage(language === "English" ? "हिन्दी" : "English")}><Languages /> {language}</button><div className="avatar">{user.picture ? <img src={user.picture} alt="" /> : user.name[0]}</div></div>
         </header>
 
         {active === "Overview" ? <>

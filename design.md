@@ -163,7 +163,7 @@ The page is edge-to-edge at every breakpoint. On laptops, the hero image fills t
 - Global tokens and responsive rules live in `app/globals.css`.
 - Phone-number and OTP login are not used. Authentication is implemented through Google OAuth with secure server-side session cookies.
 - Buyer offers and batch history are representative demo data.
-- The QR graphic is illustrative and must later be replaced with a signed batch verification URL.
+- Batch passports now render a scannable QR that opens the batch's public verification URL.
 # Product application extension
 
 The marketing landing page remains the public entry point and keeps the approved farmer hero photograph unchanged. The product now extends behind a dedicated authentication screen and a responsive workspace.
@@ -190,3 +190,18 @@ The D1 schema contains users, farms, wool batches, batch events, buyer bids, ser
 ## Visual system
 
 The authenticated workspace continues the landing page's deep forest green, warm white, pastel moss, and lime accent. Dense operational information uses compact white panels, restrained status chips, clear typographic hierarchy, and responsive tables. The public batch passport uses the same system so that a QR scan still feels like WoolTrace.
+
+## Multi-portal architecture
+
+WoolTrace has eight distinct workspaces connected to one batch passport:
+
+1. Farmer — farm origin, shearing, batch registration and sale acceptance.
+2. Buyer — discovery, reverse bids, purchase terms and delivery acceptance.
+3. Laboratory — fibre measurements, grading and signed certificates.
+4. Transporter — pickup, sealed custody, route checkpoints and delivery proof.
+5. Warehouse — inbound weight, storage conditions and authorized dispatch.
+6. Processor — scouring, yield, spinning and child-lot creation.
+7. Brand and retail — fabric receipt, product manufacturing and consumer QR publication.
+8. Administrator — stakeholder verification, exceptions, disputes and audit.
+
+The shared lifecycle covers farm origin, shearing, sorting, laboratory testing, reverse bidding, transport, storage, scouring and spinning, fabric or product manufacturing, and retail verification. Each stage identifies the portal responsible for recording it. A batch may split into child lots during processing, but every child record must retain the parent batch ID so the final product can resolve back to its farm source.
