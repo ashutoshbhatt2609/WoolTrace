@@ -205,3 +205,17 @@ WoolTrace has eight distinct workspaces connected to one batch passport:
 8. Administrator — stakeholder verification, exceptions, disputes and audit.
 
 The shared lifecycle covers farm origin, shearing, sorting, laboratory testing, reverse bidding, transport, storage, scouring and spinning, fabric or product manufacturing, and retail verification. Each stage identifies the portal responsible for recording it. A batch may split into child lots during processing, but every child record must retain the parent batch ID so the final product can resolve back to its farm source.
+
+## Functional workspace routes
+
+The dashboard overview links to dedicated working routes rather than placeholder panels:
+
+- `/workspace/my-wool` creates persistent batches and QR passports.
+- `/workspace/woolkart` searches live listings and records buyer offers.
+- `/workspace/reverse-bidding` loads saved offers and lets the farmer accept one.
+- `/workspace/traceability` opens any batch passport by ID.
+- `/workspace/quality` writes grade, micron and staple results to the batch and custody history.
+- `/workspace/transport`, `/workspace/warehouses`, and `/workspace/services` create persistent bookings.
+- `/workspace/market-prices` displays current weather and honest integration-health states.
+
+All write actions use authenticated server endpoints and D1. Empty, loading, error and success states remain visible inside the relevant workspace.

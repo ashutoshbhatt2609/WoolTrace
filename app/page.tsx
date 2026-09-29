@@ -10,7 +10,7 @@ import { useState } from "react";
 import { portalDefinitions, portalRoles, woolStages } from "@/app/lib/portals";
 
 const journey = [
-  { number: "01", title: "Register the shearing", text: "Create a digital batch with the farm, breed, date and weight recorded at source.", icon: Boxes, href: "/dashboard#my-wool" },
+  { number: "01", title: "Register the shearing", text: "Create a digital batch with the farm, breed, date and weight recorded at source.", icon: Boxes, href: "/workspace/my-wool" },
   { number: "02", title: "Verify wool quality", text: "Attach grade, micron, staple length, yield and the assessor’s signed certificate.", icon: BadgeCheck, href: "/portal/laboratory" },
   { number: "03", title: "Invite buyer offers", text: "Verified buyers compete on price, pickup time, deductions and payment terms.", icon: HandCoins, href: "/portal/buyer" },
   { number: "04", title: "Track every hand-off", text: "Transport, storage, processing, yarn and fabric stay linked to the source batch.", icon: PackageCheck, href: "/portals" },
@@ -20,7 +20,7 @@ const capabilities = [
   [QrCode, "QR wool passports", "One scan shows origin, quality, ownership and the complete chain of custody.", "/batch/WT-2408-KAS"],
   [HandCoins, "Reverse bidding", "Farmers compare competing offers and accept the best net value on their own terms.", "/portal/buyer"],
   [Truck, "Connected logistics", "Book transport and storage without losing visibility of the batch.", "/portal/transporter"],
-  [BarChart3, "Market intelligence", "See live provider status and practical reserve-price information.", "/dashboard#market-prices"],
+  [BarChart3, "Market intelligence", "See live provider status and practical reserve-price information.", "/workspace/market-prices"],
 ] as const;
 
 function Mark() {
@@ -89,7 +89,7 @@ export default function Home() {
         <div><span className="khet-eyebrow light">Verified. Transparent. Accountable.</span><h2>A more dependable wool economy.</h2><p>Farmer identity, laboratory quality, buyer credentials, logistics status and every ownership milestone appear in one shared record.</p></div><div className="khet-trust-grid"><article><ShieldCheck /><strong>Signed events</strong><span>Every update belongs to a verified stakeholder.</span></article><article><Warehouse /><strong>Visible custody</strong><span>Storage and transport never break the batch history.</span></article><article><Globe2 /><strong>Public proof</strong><span>Anyone can scan the QR without seeing private farm data.</span></article></div>
       </section>
 
-      <section className="landing-final-cta"><div><span className="khet-eyebrow light">Ready when the wool is sheared</span><h2>Create the first verified batch record.</h2></div><div><a className="khet-primary" href="/dashboard#my-wool">Register wool <ArrowRight /></a><a href="/portals">Choose your portal <ChevronRight /></a></div></section>
+      <section className="landing-final-cta"><div><span className="khet-eyebrow light">Ready when the wool is sheared</span><h2>Create the first verified batch record.</h2></div><div><a className="khet-primary" href="/workspace/my-wool">Register wool <ArrowRight /></a><a href="/portals">Choose your portal <ChevronRight /></a></div></section>
 
       <footer className="khet-footer"><div><a href="#home" className="khet-brand"><Mark /><strong>WOOLTRACE</strong></a><p>Farm-to-product traceability and direct wool commerce for Indian farmers.</p></div><div><strong>PLATFORM</strong><a href="#how">How it works</a><a href="#lifecycle">Wool lifecycle</a><a href="/portals">Stakeholder portals</a></div><div><strong>ACCESS</strong><a href="/login">Google sign-in</a><a href="/dashboard">Farmer dashboard</a><a href="/batch/WT-2408-KAS">Sample passport</a></div><div><strong>LANGUAGES</strong><p>English · हिंदी · ಕನ್ನಡ<br />தமிழ் · తెలుగు · मराठी</p></div><small>© 2026 WoolTrace · From sheep to shelf, clearly.</small></footer>
     </main>

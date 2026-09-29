@@ -106,7 +106,7 @@ export default function DashboardClient({ user }: { user: GoogleUser }) {
       <aside className={`app-sidebar ${mobile ? "show" : ""}`}>
         <div className="app-logo"><span className="brand-mark"><Sprout className="size-4" /></span><span>WoolTrace</span><button onClick={() => setMobile(false)}><X /></button></div>
         <p className="side-label">WORKSPACE</p>
-        <nav>{modules.map(([label, Icon]) => <button className={active === label ? "active" : ""} key={label} onClick={() => { setActive(label); setMobile(false); }}><Icon /><span>{label}</span>{label === "Reverse bidding" && <b>7</b>}</button>)}</nav>
+        <nav>{modules.map(([label, Icon]) => label === "Overview" ? <button className="active" key={label} onClick={() => { setActive("Overview"); setMobile(false); }}><Icon /><span>{label}</span></button> : <Link key={label} href={`/workspace/${label.toLowerCase().replace(/\s+/g, "-")}`}><Icon /><span>{label}</span>{label === "Reverse bidding" && <b>Live</b>}</Link>)}</nav>
         <div className="side-bottom"><Link href="/portals"><UsersRound /> Switch portal</Link><button onClick={() => setPopover("settings")}><Settings /> Settings</button><a href="/api/auth/logout"><LogOut /> Sign out</a></div>
       </aside>
 
@@ -118,7 +118,7 @@ export default function DashboardClient({ user }: { user: GoogleUser }) {
         </header>
 
         {active === "Overview" ? <>
-          <section className="welcome-card"><div><p className="kicker light">GOOD MORNING, {user.name.split(" ")[0].toUpperCase()}</p><h2>Your wool is earning<br />what it is worth.</h2><p>Seven verified buyers are competing for batch WT-2408-KAS. The highest offer is 8.4% above your reserve price.</p><button onClick={() => setActive("Reverse bidding")}>Review live offers <ChevronRight /></button></div><div className="welcome-price"><span>Best live offer</span><strong>₹612<small>/kg</small></strong><em>+8.4% above reserve</em></div></section>
+          <section className="welcome-card"><div><p className="kicker light">GOOD MORNING, {user.name.split(" ")[0].toUpperCase()}</p><h2>Your wool is earning<br />what it is worth.</h2><p>Register real batches, collect buyer offers and keep every handoff attached to the QR passport.</p><Link className="welcome-action" href="/workspace/reverse-bidding">Review live offers <ChevronRight /></Link></div><div className="welcome-price"><span>Sample leading offer</span><strong>₹612<small>/kg</small></strong><em>Demo data · open live workspace</em></div></section>
           <section className="live-data-strip" aria-live="polite">
             <div className="live-data-heading"><div><span className="live-dot" /> LIVE DATA</div><small>{live ? `Updated ${new Date(live.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : liveError || "Connecting…"}</small></div>
             <article><p>Farm weather</p>{live?.weather ? <><strong>{Math.round(live.weather.temperatureC)}°C</strong><small>{live.location} · {live.weather.humidityPercent}% humidity · {Math.round(live.weather.windKph)} km/h wind</small></> : <><strong>—</strong><small>Waiting for provider</small></>}</article>

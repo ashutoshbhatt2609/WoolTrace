@@ -14,12 +14,15 @@ const batchInput = z.object({
   date: z.coerce.date(),
 });
 
-export async function GET() {
+export async function GET(request: Request) {
   const user = await getGoogleUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const db = getDb();
-  const records = await db.select().from(woolBatches).where(eq(woolBatches.farmerId, user.sub)).orderBy(desc(woolBatches.createdAt));
+  const marketplace = new URL(request.url).searchParams.get("scope") === "marketplace";
+  const records = marketplace
+    ? await db.select().from(woolBatches).orderBy(desc(woolBatches.createdAt)).limit(50)
+    : await db.select().from(woolBatches).where(eq(woolBatches.farmerId, user.sub)).orderBy(desc(woolBatches.createdAt));
   return NextResponse.json({ batches: records.map(toDashboardBatch) }, { headers: { "Cache-Control": "no-store" } });
 }
 
