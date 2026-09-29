@@ -1,6 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { getGoogleUser } from "@/app/lib/google-auth";
-import WorkspaceClient, { workspaceModules, type WorkspaceModule } from "./workspace-client";
+import WorkspaceClient from "./workspace-client";
+
+const workspaceModules = ["my-wool", "woolkart", "reverse-bidding", "traceability", "quality", "transport", "warehouses", "services", "market-prices"] as const;
+type WorkspaceModule = typeof workspaceModules[number];
 
 export const dynamic = "force-dynamic";
 
