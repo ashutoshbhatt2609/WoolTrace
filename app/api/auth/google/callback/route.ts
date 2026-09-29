@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSession, SESSION_COOKIE, STATE_COOKIE, type GoogleUser } from "@/app/lib/google-auth";
+import { appBaseUrl } from "@/app/lib/integration-config";
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const state = request.nextUrl.searchParams.get("state");
   const expected = request.cookies.get(STATE_COOKIE)?.value;
   if (!code || !state || state !== expected) return NextResponse.redirect(new URL("/login?error=oauth", request.url));
-  const redirectUri = new URL("/api/auth/google/callback", request.url).toString();
+  const redirectUri = new URL("/api/auth/google/callback", appBaseUrl()).toString();
   const tokenResponse = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ code, client_id: process.env.GOOGLE_CLIENT_ID!, client_secret: process.env.GOOGLE_CLIENT_SECRET!, redirect_uri: redirectUri, grant_type: "authorization_code" }) });
   if (!tokenResponse.ok) return NextResponse.redirect(new URL("/login?error=oauth", request.url));
   const token = (await tokenResponse.json()) as { access_token: string };

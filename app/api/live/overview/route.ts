@@ -1,98 +1,43 @@
 import { NextResponse } from "next/server";
 import { getGoogleUser } from "@/app/lib/google-auth";
+import { integrationDefinitions, type IntegrationState } from "@/app/lib/integration-config";
 
 export const dynamic = "force-dynamic";
 
-type Integration = {
-  id: string;
-  label: string;
-  status: "live" | "setup_required" | "unavailable";
-  detail: string;
-};
+type Integration = { id: string; label: string; status: IntegrationState; detail: string };
+type MarketQuote = { commodity: string; variety: string; market: string; district: string; state: string; minPrice: string; maxPrice: string; modalPrice: string; arrivalDate: string };
 
 export async function GET() {
   const user = await getGoogleUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const integrations: Integration[] = [
-    { id: "traceability", label: "Traceability database", status: "live", detail: "Cloudflare D1" },
-    connection("market", "Mandi market feed", "DATA_GOV_IN_API_KEY", "AGMARKNET_RESOURCE_ID"),
-    connection("logistics", "Logistics tracking", "LOGISTICS_API_URL", "LOGISTICS_API_KEY"),
-    connection("maps", "Maps and geocoding", "GOOGLE_MAPS_API_KEY"),
-    connection("payments", "Payments", "RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"),
-    connection("lab", "Laboratory results", "LAB_API_URL", "LAB_API_KEY"),
-  ];
-
-  let weather: null | {
-    temperatureC: number;
-    humidityPercent: number;
-    windKph: number;
-    precipitationMm: number;
-    weatherCode: number;
-    observedAt: string;
-    source: string;
-  } = null;
-
-  try {
-    const latitude = process.env.FARM_LATITUDE ?? "34.0484";
-    const longitude = process.env.FARM_LONGITUDE ?? "74.3805";
-    const query = new URLSearchParams({
-      latitude,
-      longitude,
-      current: "temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m",
-      timezone: "Asia/Kolkata",
-    });
-    const response = await fetch(`https://api.open-meteo.com/v1/forecast?${query}`, {
-      cache: "no-store",
-      headers: { Accept: "application/json" },
-    });
-    if (!response.ok) throw new Error(`Weather service returned ${response.status}`);
-    const payload = await response.json() as {
-      current?: {
-        temperature_2m?: number;
-        relative_humidity_2m?: number;
-        wind_speed_10m?: number;
-        precipitation?: number;
-        weather_code?: number;
-        time?: string;
-      };
-    };
-    if (payload.current) {
-      weather = {
-        temperatureC: payload.current.temperature_2m ?? 0,
-        humidityPercent: payload.current.relative_humidity_2m ?? 0,
-        windKph: payload.current.wind_speed_10m ?? 0,
-        precipitationMm: payload.current.precipitation ?? 0,
-        weatherCode: payload.current.weather_code ?? 0,
-        observedAt: payload.current.time ?? new Date().toISOString(),
-        source: "Open-Meteo",
-      };
-    }
-  } catch {
-    integrations.push({ id: "weather", label: "Farm weather", status: "unavailable", detail: "Provider temporarily unavailable" });
-  }
-
-  if (weather) integrations.unshift({ id: "weather", label: "Farm weather", status: "live", detail: weather.source });
-
-  return NextResponse.json(
-    {
-      updatedAt: new Date().toISOString(),
-      location: process.env.FARM_LOCATION_NAME ?? "Gulmarg, Jammu & Kashmir",
-      weather,
-      integrations,
-      liveCount: integrations.filter((item) => item.status === "live").length,
-      totalCount: integrations.length,
-    },
-    { headers: { "Cache-Control": "no-store, max-age=0" } },
-  );
+  const integrations: Integration[] = integrationDefinitions().filter((item) => item.id !== "auth").map((item) => ({ id: item.id, label: item.label, status: item.state, detail: item.detail }));
+  const [weatherResult, marketResult] = await Promise.allSettled([loadWeather(), loadMarketPrices()]);
+  const weather = weatherResult.status === "fulfilled" ? weatherResult.value : null;
+  const market = marketResult.status === "fulfilled" ? marketResult.value : [];
+  setStatus(integrations, "weather", weather ? "live" : "unavailable", weather ? "Open-Meteo responded successfully" : "Provider temporarily unavailable");
+  if (process.env.DATA_GOV_IN_API_KEY && process.env.AGMARKNET_RESOURCE_ID) setStatus(integrations, "market", market.length ? "live" : "unavailable", market.length ? `${market.length} government market records received` : "The configured feed returned no usable records");
+  return NextResponse.json({ updatedAt: new Date().toISOString(), location: process.env.FARM_LOCATION_NAME ?? "Gulmarg, Jammu & Kashmir", weather, market, integrations, liveCount: integrations.filter((item) => item.status === "live" || item.status === "configured").length, totalCount: integrations.length }, { headers: { "Cache-Control": "no-store, max-age=0" } });
 }
 
-function connection(id: string, label: string, ...keys: string[]): Integration {
-  const configured = keys.every((key) => Boolean(process.env[key]));
-  return {
-    id,
-    label,
-    status: configured ? "live" : "setup_required",
-    detail: configured ? "Credentials connected" : "Provider credentials needed",
-  };
+async function loadWeather() {
+  const query = new URLSearchParams({ latitude: process.env.FARM_LATITUDE ?? "34.0484", longitude: process.env.FARM_LONGITUDE ?? "74.3805", current: "temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m", timezone: "Asia/Kolkata" });
+  const response = await fetch(`https://api.open-meteo.com/v1/forecast?${query}`, { cache: "no-store", headers: { Accept: "application/json" } });
+  if (!response.ok) throw new Error(`Weather service returned ${response.status}`);
+  const payload = await response.json() as { current?: { temperature_2m?: number; relative_humidity_2m?: number; wind_speed_10m?: number; precipitation?: number; weather_code?: number; time?: string } };
+  if (!payload.current) throw new Error("Weather response did not contain current conditions");
+  return { temperatureC: payload.current.temperature_2m ?? 0, humidityPercent: payload.current.relative_humidity_2m ?? 0, windKph: payload.current.wind_speed_10m ?? 0, precipitationMm: payload.current.precipitation ?? 0, weatherCode: payload.current.weather_code ?? 0, observedAt: payload.current.time ?? new Date().toISOString(), source: "Open-Meteo" };
 }
+
+async function loadMarketPrices(): Promise<MarketQuote[]> {
+  const apiKey = process.env.DATA_GOV_IN_API_KEY;
+  const resourceId = process.env.AGMARKNET_RESOURCE_ID;
+  if (!apiKey || !resourceId) return [];
+  const query = new URLSearchParams({ "api-key": apiKey, format: "json", limit: "12" });
+  const response = await fetch(`https://api.data.gov.in/resource/${encodeURIComponent(resourceId)}?${query}`, { cache: "no-store", headers: { Accept: "application/json" } });
+  if (!response.ok) throw new Error(`Market service returned ${response.status}`);
+  const payload = await response.json() as { records?: Record<string, unknown>[] };
+  return (payload.records ?? []).map((record) => ({ commodity: value(record, "commodity"), variety: value(record, "variety"), market: value(record, "market"), district: value(record, "district"), state: value(record, "state"), minPrice: value(record, "min_price"), maxPrice: value(record, "max_price"), modalPrice: value(record, "modal_price"), arrivalDate: value(record, "arrival_date") })).filter((record) => record.commodity || record.market);
+}
+
+function value(record: Record<string, unknown>, key: string) { return String(record[key] ?? record[key.replace(/_/g, " ")] ?? ""); }
+function setStatus(items: Integration[], id: string, status: IntegrationState, detail: string) { const item = items.find((entry) => entry.id === id); if (item) { item.status = status; item.detail = detail; } }

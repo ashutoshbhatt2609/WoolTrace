@@ -1,5 +1,7 @@
 # vinext-starter
 
+WoolTrace production integration requirements are documented in [INTEGRATIONS.md](./INTEGRATIONS.md). Copy `.env.example` when configuring a local or hosted environment; never commit real credentials.
+
 A clean full-stack starter running on [vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and Drizzle support.
 
 ## Prerequisites

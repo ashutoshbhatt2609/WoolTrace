@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   BadgeCheck, BarChart3, Bell, Boxes, ChevronRight, ClipboardCheck, Gauge,
   HandCoins, Languages, LayoutDashboard, LogOut, Menu, PackagePlus, QrCode,
-  Search, Settings, ShieldCheck, Sprout, Store, Truck, UsersRound, Warehouse, X,
+  PlugZap, Search, Settings, ShieldCheck, Sprout, Store, Truck, UsersRound, Warehouse, X,
 } from "lucide-react";
 import type { GoogleUser } from "@/app/lib/google-auth";
 
@@ -26,7 +26,7 @@ type LiveOverview = {
   updatedAt: string;
   location: string;
   weather: null | { temperatureC: number; humidityPercent: number; windKph: number; precipitationMm: number; source: string };
-  integrations: { id: string; label: string; status: "live" | "setup_required" | "unavailable"; detail: string }[];
+  integrations: { id: string; label: string; status: "live" | "configured" | "setup_required" | "unavailable"; detail: string }[];
   liveCount: number;
   totalCount: number;
 };
@@ -76,7 +76,8 @@ export default function DashboardClient({ user }: { user: GoogleUser }) {
   useEffect(() => {
     const requested = window.location.hash.slice(1).replace(/-/g, " ");
     const match = modules.find(([label]) => label.toLowerCase() === requested.toLowerCase());
-    if (match) setActive(match[0]);
+    const timer = match ? window.setTimeout(() => setActive(match[0]), 0) : undefined;
+    return () => { if (timer) window.clearTimeout(timer); };
   }, []);
 
   async function createBatch(event: React.FormEvent<HTMLFormElement>) {
@@ -107,7 +108,7 @@ export default function DashboardClient({ user }: { user: GoogleUser }) {
         <div className="app-logo"><span className="brand-mark"><Sprout className="size-4" /></span><span>WoolTrace</span><button onClick={() => setMobile(false)}><X /></button></div>
         <p className="side-label">WORKSPACE</p>
         <nav>{modules.map(([label, Icon]) => label === "Overview" ? <button className="active" key={label} onClick={() => { setActive("Overview"); setMobile(false); }}><Icon /><span>{label}</span></button> : <Link key={label} href={`/workspace/${label.toLowerCase().replace(/\s+/g, "-")}`}><Icon /><span>{label}</span>{label === "Reverse bidding" && <b>Live</b>}</Link>)}</nav>
-        <div className="side-bottom"><Link href="/portals"><UsersRound /> Switch portal</Link><button onClick={() => setPopover("settings")}><Settings /> Settings</button><a href="/api/auth/logout"><LogOut /> Sign out</a></div>
+        <div className="side-bottom"><Link href="/portals"><UsersRound /> Switch portal</Link><Link href="/integrations"><PlugZap /> API & production setup</Link><button onClick={() => setPopover("settings")}><Settings /> Settings</button><a href="/api/auth/logout"><LogOut /> Sign out</a></div>
       </aside>
 
       <section className="app-main">
@@ -123,7 +124,7 @@ export default function DashboardClient({ user }: { user: GoogleUser }) {
             <div className="live-data-heading"><div><span className="live-dot" /> LIVE DATA</div><small>{live ? `Updated ${new Date(live.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : liveError || "Connecting…"}</small></div>
             <article><p>Farm weather</p>{live?.weather ? <><strong>{Math.round(live.weather.temperatureC)}°C</strong><small>{live.location} · {live.weather.humidityPercent}% humidity · {Math.round(live.weather.windKph)} km/h wind</small></> : <><strong>—</strong><small>Waiting for provider</small></>}</article>
             <article><p>Data connections</p><strong>{live ? `${live.liveCount}/${live.totalCount}` : "—"}</strong><small>Live and credential-verified</small></article>
-            <article className="connection-summary"><p>Provider status</p><div>{live?.integrations.slice(0, 4).map((item) => <span className={item.status} key={item.id}><i />{item.label}<b>{item.status === "live" ? "Live" : item.status === "setup_required" ? "Setup required" : "Unavailable"}</b></span>) ?? <small>Checking integrations…</small>}</div></article>
+            <article className="connection-summary"><p>Provider status</p><div>{live?.integrations.slice(0, 4).map((item) => <span className={item.status} key={item.id}><i />{item.label}<b>{item.status === "live" ? "Live" : item.status === "configured" ? "Configured" : item.status === "setup_required" ? "Setup required" : "Unavailable"}</b></span>) ?? <small>Checking integrations…</small>}</div></article>
           </section>
           <section className="metric-grid">
             <article><span><Boxes /></span><p>Active wool</p><strong>{batches.reduce((sum, b) => sum + b.weight, 0)} kg</strong><small>Across {batches.length} batches</small></article>
@@ -138,7 +139,7 @@ export default function DashboardClient({ user }: { user: GoogleUser }) {
         </> : <ModuleView name={active} onCreate={() => setShowCreate(true)} batches={batches} />}
       </section>
 
-      {popover === "settings" && <div className="modal-backdrop"><div className="portal-modal"><button className="modal-close" onClick={() => setPopover(null)}><X /></button><Settings /><p className="kicker">WORKSPACE SETTINGS</p><h2>Your preferences</h2><p>Choose the interface language or move to another stakeholder portal.</p><label>Language<select value={language} onChange={(event) => setLanguage(event.target.value)}><option>English</option><option>हिन्दी</option></select></label><Link className="lime-button settings-link" href="/portals"><UsersRound /> Choose portal</Link></div></div>}
+      {popover === "settings" && <div className="modal-backdrop"><div className="portal-modal"><button className="modal-close" onClick={() => setPopover(null)}><X /></button><Settings /><p className="kicker">WORKSPACE SETTINGS</p><h2>Your preferences</h2><p>Choose the interface language, move to another stakeholder portal or review production connections.</p><label>Language<select value={language} onChange={(event) => setLanguage(event.target.value)}><option>English</option><option>हिन्दी</option></select></label><Link className="lime-button settings-link" href="/portals"><UsersRound /> Choose portal</Link><Link className="setup-text-link" href="/integrations"><PlugZap /> API & production setup</Link></div></div>}
       {showCreate && <div className="modal-backdrop"><form className="batch-modal" onSubmit={createBatch}><button type="button" className="modal-close" onClick={() => setShowCreate(false)}><X /></button><p className="kicker">NEW DIGITAL PASSPORT</p><h2>Register a wool batch</h2><p>Start the verified history at the point of shearing. This record is saved securely to WoolTrace.</p><label>Breed<input name="breed" required placeholder="e.g. Kashmir Merino" /></label><div className="form-pair"><label>Weight (kg)<input name="weight" required min="1" type="number" /></label><label>Reserve ₹/kg<input name="reserve" required min="0" type="number" /></label></div><label>Shearing date<input name="date" required type="date" /></label>{saveError && <p className="form-error">{saveError}</p>}<button className="lime-button" type="submit" disabled={isSaving}>{isSaving ? "Saving batch…" : "Create batch & QR"} <QrCode /></button></form></div>}
     </main>
   );

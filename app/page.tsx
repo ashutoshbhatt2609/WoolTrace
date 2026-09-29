@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import {
   ArrowRight, BadgeCheck, BarChart3, Boxes, CheckCircle2, ChevronRight,
   Globe2, HandCoins, Languages, Menu, PackageCheck, QrCode, ShieldCheck,
@@ -83,15 +84,15 @@ export default function Home() {
         <div className="khet-cap-grid">{capabilities.map(([Icon, title, text, href]) => <a href={href} key={title}><Icon /><h3>{title}</h3><p>{text}</p><span>Use this tool <ArrowRight /></span></a>)}</div>
       </section>
 
-      <section id="lifecycle" className="landing-lifecycle"><div className="khet-section-heading"><div><span className="khet-eyebrow">The complete wool lifecycle</span><h2>From sheep to shelf,<br />the source stays visible.</h2></div><p>When a batch becomes yarn, fabric or several finished products, every child lot continues to point back to the original farm record.</p></div><div>{woolStages.map((stage, index) => { const Icon = stage.icon; return <article key={stage.key}><span>{String(index + 1).padStart(2, "0")}</span><Icon /><h3>{stage.title}</h3><p>{stage.detail}</p><small>{stage.owner}</small></article>; })}</div><a className="khet-primary" href="/batch/WT-2408-KAS">Scan the sample journey <QrCode /></a></section>
+      <section id="lifecycle" className="landing-lifecycle"><div className="khet-section-heading"><div><span className="khet-eyebrow">The complete wool lifecycle</span><h2>From sheep to shelf,<br />the source stays visible.</h2></div><p>When a batch becomes yarn, fabric or several finished products, every child lot continues to point back to the original farm record.</p></div><div>{woolStages.map((stage, index) => { const Icon = stage.icon; return <article key={stage.key}><span>{String(index + 1).padStart(2, "0")}</span><Icon /><h3>{stage.title}</h3><p>{stage.detail}</p><small>{stage.owner}</small></article>; })}</div><Link className="khet-primary" href="/batch/WT-2408-KAS">Scan the sample journey <QrCode /></Link></section>
 
       <section id="trust" className="khet-trust">
         <div><span className="khet-eyebrow light">Verified. Transparent. Accountable.</span><h2>A more dependable wool economy.</h2><p>Farmer identity, laboratory quality, buyer credentials, logistics status and every ownership milestone appear in one shared record.</p></div><div className="khet-trust-grid"><article><ShieldCheck /><strong>Signed events</strong><span>Every update belongs to a verified stakeholder.</span></article><article><Warehouse /><strong>Visible custody</strong><span>Storage and transport never break the batch history.</span></article><article><Globe2 /><strong>Public proof</strong><span>Anyone can scan the QR without seeing private farm data.</span></article></div>
       </section>
 
-      <section className="landing-final-cta"><div><span className="khet-eyebrow light">Ready when the wool is sheared</span><h2>Create the first verified batch record.</h2></div><div><a className="khet-primary" href="/workspace/my-wool">Register wool <ArrowRight /></a><a href="/portals">Choose your portal <ChevronRight /></a></div></section>
+      <section className="landing-final-cta"><div><span className="khet-eyebrow light">Ready when the wool is sheared</span><h2>Create the first verified batch record.</h2></div><div><Link className="khet-primary" href="/workspace/my-wool">Register wool <ArrowRight /></Link><Link href="/portals">Choose your portal <ChevronRight /></Link></div></section>
 
-      <footer className="khet-footer"><div><a href="#home" className="khet-brand"><Mark /><strong>WOOLTRACE</strong></a><p>Farm-to-product traceability and direct wool commerce for Indian farmers.</p></div><div><strong>PLATFORM</strong><a href="#how">How it works</a><a href="#lifecycle">Wool lifecycle</a><a href="/portals">Stakeholder portals</a></div><div><strong>ACCESS</strong><a href="/login">Google sign-in</a><a href="/dashboard">Farmer dashboard</a><a href="/batch/WT-2408-KAS">Sample passport</a></div><div><strong>LANGUAGES</strong><p>English · हिंदी · ಕನ್ನಡ<br />தமிழ் · తెలుగు · मराठी</p></div><small>© 2026 WoolTrace · From sheep to shelf, clearly.</small></footer>
+      <footer className="khet-footer"><div><a href="#home" className="khet-brand"><Mark /><strong>WOOLTRACE</strong></a><p>Farm-to-product traceability and direct wool commerce for Indian farmers.</p></div><div><strong>PLATFORM</strong><a href="#how">How it works</a><a href="#lifecycle">Wool lifecycle</a><Link href="/portals">Stakeholder portals</Link></div><div><strong>ACCESS</strong><Link href="/login">Google sign-in</Link><Link href="/dashboard">Farmer dashboard</Link><Link href="/batch/WT-2408-KAS">Sample passport</Link></div><div><strong>LANGUAGES</strong><p>English · हिंदी · ಕನ್ನಡ<br />தமிழ் · తెలుగు · मराठी</p></div><small>© 2026 WoolTrace · From sheep to shelf, clearly.</small></footer>
     </main>
   );
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft, BadgeCheck, BarChart3, Boxes, CheckCircle2, ClipboardCheck,
-  HandCoins, LayoutDashboard, PackagePlus, QrCode, Search, Sprout, Store,
+  HandCoins, LayoutDashboard, PackagePlus, PlugZap, QrCode, Search, Sprout, Store,
   Truck, Warehouse,
 } from "lucide-react";
 import type { GoogleUser } from "@/app/lib/google-auth";
@@ -27,11 +27,11 @@ const moduleInfo: Record<WorkspaceModule, { label: string; title: string; text: 
 type Batch = { id: string; breed: string; weight: number; grade: string; status: string; bids: number; price: number; source: string };
 type Bid = { id: string; batchId: string; pricePerKg: number; pickupDays: number; paymentTerms: string; status: string };
 type Booking = { id: string; batchId?: string; kind: string; providerName: string; scheduledAt: string; status: string };
-type Live = { updatedAt: string; location: string; weather: null | { temperatureC: number; humidityPercent: number; windKph: number }; integrations: { id: string; label: string; status: string; detail: string }[] };
+type MarketQuote = { commodity: string; variety: string; market: string; district: string; state: string; minPrice: string; maxPrice: string; modalPrice: string; arrivalDate: string };
+type Live = { updatedAt: string; location: string; weather: null | { temperatureC: number; humidityPercent: number; windKph: number }; market: MarketQuote[]; integrations: { id: string; label: string; status: string; detail: string }[] };
 
 export default function WorkspaceClient({ module, user }: { module: WorkspaceModule; user: GoogleUser }) {
   const info = moduleInfo[module];
-  const Icon = info.icon;
   const [batches, setBatches] = useState<Batch[]>([]);
   const [bids, setBids] = useState<Bid[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -55,7 +55,12 @@ export default function WorkspaceClient({ module, user }: { module: WorkspaceMod
     if (module === "market-prices") setLive(await responses[1].json() as Live);
   }
 
-  useEffect(() => { void load().catch(() => setMessage("This workspace could not load. Please try again.")); }, [module]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void load().catch(() => setMessage("This workspace could not load. Please try again.")); }, 0);
+    return () => window.clearTimeout(timer);
+    // Each module change intentionally reloads its own API collection.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [module]);
 
   async function submit(url: string, data: Record<string, FormDataEntryValue | string>, success: string, method = "POST") {
     setBusy(true); setMessage("");
@@ -70,7 +75,7 @@ export default function WorkspaceClient({ module, user }: { module: WorkspaceMod
 
   function formData(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); return Object.fromEntries(new FormData(event.currentTarget).entries()); }
 
-  return <main className="workspace-page"><aside><Link href="/dashboard" className="portal-brand"><span className="brand-mark"><Sprout /></span> WoolTrace</Link><nav><Link href="/dashboard"><LayoutDashboard /> Overview</Link>{workspaceModules.map((item) => { const ItemIcon = moduleInfo[item].icon; return <Link className={item === module ? "active" : ""} href={`/workspace/${item}`} key={item}><ItemIcon /> {moduleInfo[item].label}</Link>; })}</nav><Link href="/portals"><ArrowLeft /> Stakeholder portals</Link></aside>
+  return <main className="workspace-page"><aside><Link href="/dashboard" className="portal-brand"><span className="brand-mark"><Sprout /></span> WoolTrace</Link><nav><Link href="/dashboard"><LayoutDashboard /> Overview</Link>{workspaceModules.map((item) => { const ItemIcon = moduleInfo[item].icon; return <Link className={item === module ? "active" : ""} href={`/workspace/${item}`} key={item}><ItemIcon /> {moduleInfo[item].label}</Link>; })}<Link href="/integrations"><PlugZap /> API setup</Link></nav><Link href="/portals"><ArrowLeft /> Stakeholder portals</Link></aside>
     <section className="workspace-content"><header><div><p className="kicker">{info.label.toUpperCase()}</p><h1>{info.title}</h1><p>{info.text}</p></div><span className="workspace-user">{user.name[0]}</span></header>
       {message && <div className={message.includes("not") || message.includes("could") || message.includes("valid") ? "workspace-message error" : "workspace-message"}>{message}</div>}
       {module === "my-wool" && <div className="workspace-two"><form className="workspace-form" onSubmit={(event) => { const data = formData(event); void submit("/api/batches", data, "Batch registered and QR passport created."); }}><p className="kicker">NEW BATCH</p><h2>Register at shearing</h2><label>Breed<input name="breed" required /></label><div><label>Weight (kg)<input name="weight" type="number" min="1" required /></label><label>Reserve ₹/kg<input name="reserve" type="number" min="0" required /></label></div><label>Shearing date<input name="date" type="date" required /></label><button disabled={busy}><PackagePlus /> {busy ? "Saving…" : "Create batch passport"}</button></form><BatchList batches={batches} empty="No live batches yet. Register your first shearing batch." /></div>}
@@ -79,7 +84,7 @@ export default function WorkspaceClient({ module, user }: { module: WorkspaceMod
       {module === "traceability" && <form className="trace-lookup" onSubmit={(event) => { const data = formData(event); window.location.assign(`/batch/${encodeURIComponent(String(data.batchId))}`); }}><QrCode /><p className="kicker">QR PASSPORT LOOKUP</p><h2>Enter a batch ID</h2><p>Open its origin, quality, ownership, logistics and processing history.</p><label>Batch ID<input name="batchId" defaultValue={batches[0]?.id ?? "WT-2408-KAS"} required /></label><button>Open wool passport</button><Link href="/batch/WT-2408-KAS">View the sample passport</Link></form>}
       {module === "quality" && <div className="workspace-two"><form className="workspace-form" onSubmit={(event) => { const data = formData(event); void submit("/api/batches/quality", data, "Quality measurements saved to the passport."); }}><p className="kicker">LAB RESULT</p><h2>Verify fibre quality</h2><label>Batch ID<input name="batchId" required /></label><div><label>Grade<input name="grade" required placeholder="A" /></label><label>Micron<input name="micron" type="number" step="0.1" required /></label></div><div><label>Staple length (mm)<input name="stapleMm" type="number" required /></label><label>Laboratory<input name="location" required /></label></div><button disabled={busy}><BadgeCheck /> Save verified result</button></form><BatchList batches={batches} empty="No batch is ready for quality testing." /></div>}
       {(["transport", "warehouses", "services"] as WorkspaceModule[]).includes(module) && <div className="workspace-two"><BookingForm module={module} busy={busy} batches={batches} onSubmit={(data) => void submit("/api/bookings", data, "Booking request saved.")} /><section className="booking-list"><p className="kicker">YOUR REQUESTS</p><h2>Bookings</h2>{bookings.map((booking) => <article key={booking.id}><span><CheckCircle2 /></span><div><strong>{booking.providerName}</strong><small>{booking.kind} · {new Date(booking.scheduledAt).toLocaleDateString("en-IN")}</small></div><i>{booking.status}</i></article>)}{!bookings.length && <div className="workspace-empty"><Warehouse /><h2>No bookings yet</h2><p>Your saved requests will appear here.</p></div>}</section></div>}
-      {module === "market-prices" && <section className="connections-page"><div className="weather-panel"><p className="kicker">LIVE FARM CONDITIONS</p><h2>{live?.weather ? `${Math.round(live.weather.temperatureC)}°C` : "Unavailable"}</h2><p>{live?.location ?? "Gulmarg"}</p>{live?.weather && <small>{live.weather.humidityPercent}% humidity · {Math.round(live.weather.windKph)} km/h wind</small>}</div><div className="connections-list"><p className="kicker">DATA PROVIDERS</p><h2>Connection status</h2>{live?.integrations.map((item) => <article key={item.id}><span className={item.status} /><div><strong>{item.label}</strong><small>{item.detail}</small></div><b>{item.status === "live" ? "Live" : item.status === "setup_required" ? "Setup required" : "Unavailable"}</b></article>)}</div></section>}
+      {module === "market-prices" && <><section className="connections-page"><div className="weather-panel"><p className="kicker">LIVE FARM CONDITIONS</p><h2>{live?.weather ? `${Math.round(live.weather.temperatureC)}°C` : "Unavailable"}</h2><p>{live?.location ?? "Gulmarg"}</p>{live?.weather && <small>{live.weather.humidityPercent}% humidity · {Math.round(live.weather.windKph)} km/h wind</small>}</div><div className="connections-list"><p className="kicker">DATA PROVIDERS</p><h2>Connection status</h2>{live?.integrations.map((item) => <article key={item.id}><span className={item.status} /><div><strong>{item.label}</strong><small>{item.detail}</small></div><b>{item.status === "live" ? "Live" : item.status === "configured" ? "Configured" : item.status === "setup_required" ? "Setup required" : "Unavailable"}</b></article>)}<Link className="connection-setup-link" href="/integrations"><PlugZap /> Open production setup</Link></div></section><section className="market-feed"><div><p className="kicker">GOVERNMENT MARKET FEED</p><h2>Latest mandi records</h2></div>{live?.market?.length ? <div>{live.market.map((quote, index) => <article key={`${quote.market}-${quote.commodity}-${index}`}><span>{quote.arrivalDate || "Latest"}</span><h3>{quote.commodity || "Commodity"}</h3><p>{quote.variety || "General variety"} · {quote.market || quote.district}</p><strong>{quote.modalPrice ? `₹${quote.modalPrice}` : "Price unavailable"}<small> modal price</small></strong><small>{[quote.district, quote.state].filter(Boolean).join(", ")}</small></article>)}</div> : <div className="market-feed-empty"><BarChart3 /><h3>Connect data.gov.in to load real mandi records</h3><p>Add the API key and AGMARKNET resource ID shown in Production setup. WoolTrace will verify the response before marking the feed live.</p><Link href="/integrations">View required variables</Link></div>}</section></>}
     </section>
   </main>;
 }
