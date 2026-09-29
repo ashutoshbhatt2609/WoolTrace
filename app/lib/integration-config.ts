@@ -75,7 +75,7 @@ export function integrationDefinitions(): IntegrationDefinition[] {
       provider: "Razorpay",
       state: configured("RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET") ? "configured" : "setup_required",
       detail: configured("RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET") ? "Live credentials present" : "Keys and webhook secret required",
-      note: `${appBaseUrl()}/api/webhooks/razorpay`,
+      note: `Planned webhook: ${appBaseUrl()}/api/webhooks/razorpay`,
     },
     {
       id: "logistics",
@@ -85,7 +85,7 @@ export function integrationDefinitions(): IntegrationDefinition[] {
       provider: "Your selected logistics provider",
       state: configured("LOGISTICS_API_URL", "LOGISTICS_API_KEY", "LOGISTICS_WEBHOOK_SECRET") ? "configured" : "setup_required",
       detail: configured("LOGISTICS_API_URL", "LOGISTICS_API_KEY", "LOGISTICS_WEBHOOK_SECRET") ? "Provider endpoint present" : "Provider and API contract still need to be selected",
-      note: `${appBaseUrl()}/api/webhooks/logistics`,
+      note: `Planned webhook: ${appBaseUrl()}/api/webhooks/logistics`,
     },
     {
       id: "lab",
@@ -95,7 +95,7 @@ export function integrationDefinitions(): IntegrationDefinition[] {
       provider: "Your selected wool testing laboratory",
       state: configured("LAB_API_URL", "LAB_API_KEY", "LAB_WEBHOOK_SECRET") ? "configured" : "setup_required",
       detail: configured("LAB_API_URL", "LAB_API_KEY", "LAB_WEBHOOK_SECRET") ? "Laboratory endpoint present" : "Laboratory and result schema still need to be selected",
-      note: `${appBaseUrl()}/api/webhooks/lab`,
+      note: `Planned webhook: ${appBaseUrl()}/api/webhooks/lab`,
     },
   ];
 }
