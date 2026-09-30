@@ -31,31 +31,32 @@ function Mark() {
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [language, setLanguage] = useState("English");
+  const hindi = language === "हिंदी";
 
   return (
     <main className="khet-page">
       <header className="khet-topbar">
         <a href="#home" className="khet-brand" aria-label="WoolTrace home"><Mark /><strong>WOOLTRACE</strong></a>
         <nav className="khet-nav" aria-label="Main navigation">
-          <a href="#how">How it works</a><a href="#platform">Platform</a><a href="#lifecycle">Wool journey</a><a href="/portals">Portals</a>
+          <a href="#how">{hindi ? "यह कैसे काम करता है" : "How it works"}</a><a href="#platform">{hindi ? "प्लेटफ़ॉर्म" : "Platform"}</a><a href="#lifecycle">{hindi ? "ऊन की यात्रा" : "Wool journey"}</a><a href="/portals">{hindi ? "पोर्टल" : "Portals"}</a>
         </nav>
         <div className="khet-header-actions">
-          <label className="khet-language"><Languages aria-hidden="true" /><span className="sr-only">Translate page</span><select value={language} onChange={(event) => setLanguage(event.target.value)} aria-label="Translate page"><option>English</option><option>हिंदी</option><option>ಕನ್ನಡ</option><option>தமிழ்</option><option>తెలుగు</option><option>मराठी</option><option>ਪੰਜਾਬੀ</option></select></label>
-          <a className="khet-signin" href="/login">Sign in with Google</a>
-          <a className="khet-open" href="/dashboard">Open platform <ArrowRight /></a>
+          <label className="khet-language"><Languages aria-hidden="true" /><span className="sr-only">Change language</span><select value={language} onChange={(event) => { setLanguage(event.target.value); document.documentElement.lang = event.target.value === "हिंदी" ? "hi" : "en"; }} aria-label="Change language"><option>English</option><option>हिंदी</option></select></label>
+          <a className="khet-signin" href="/login">{hindi ? "Google से साइन इन" : "Sign in with Google"}</a>
+          <a className="khet-open" href="/dashboard">{hindi ? "प्लेटफ़ॉर्म खोलें" : "Open platform"} <ArrowRight /></a>
         </div>
         <button className="khet-menu" type="button" aria-expanded={menuOpen} aria-label="Toggle menu" onClick={() => setMenuOpen((open) => !open)}>{menuOpen ? <X /> : <Menu />}</button>
       </header>
 
-      {menuOpen && <nav className="khet-mobile-nav"><a href="#how" onClick={() => setMenuOpen(false)}>How it works</a><a href="#platform" onClick={() => setMenuOpen(false)}>Platform</a><a href="#lifecycle" onClick={() => setMenuOpen(false)}>Wool journey</a><a href="/portals">Choose a portal</a><a href="/login">Sign in with Google</a><a className="khet-open" href="/dashboard">Open platform <ArrowRight /></a></nav>}
+      {menuOpen && <nav className="khet-mobile-nav"><a href="#how" onClick={() => setMenuOpen(false)}>{hindi ? "यह कैसे काम करता है" : "How it works"}</a><a href="#platform" onClick={() => setMenuOpen(false)}>{hindi ? "प्लेटफ़ॉर्म" : "Platform"}</a><a href="#lifecycle" onClick={() => setMenuOpen(false)}>{hindi ? "ऊन की यात्रा" : "Wool journey"}</a><a href="/portals">{hindi ? "पोर्टल चुनें" : "Choose a portal"}</a><a href="/login">{hindi ? "Google से साइन इन" : "Sign in with Google"}</a><a className="khet-open" href="/dashboard">{hindi ? "प्लेटफ़ॉर्म खोलें" : "Open platform"} <ArrowRight /></a></nav>}
 
       <section id="home" className="khet-hero">
         <div className="khet-hero-copy">
-          <div className="khet-chip"><span /> Farmer-first wool intelligence</div>
-          <h1>Know your wool.<br /><em>Sell with confidence.</em></h1>
-          <p>WoolTrace gives every batch a verified identity, connects farmers directly with trusted buyers, and keeps the whole journey visible from shearing to fabric.</p>
-          <div className="khet-hero-actions"><a className="khet-primary" href="/dashboard">Explore WoolTrace <ArrowRight /></a><a className="khet-secondary" href="#how">See how it works <ChevronRight /></a></div>
-          <div className="khet-proof"><div className="khet-avatars"><span>R</span><span>S</span><span>A</span><span>+</span></div><p><strong>Built with farmers at the centre</strong><small>Farmers · buyers · assessors · processors</small></p></div>
+          <div className="khet-chip"><span /> {hindi ? "किसान-प्रथम ऊन जानकारी" : "Farmer-first wool intelligence"}</div>
+          <h1>{hindi ? "अपनी ऊन को जानें।" : "Know your wool."}<br /><em>{hindi ? "विश्वास के साथ बेचें।" : "Sell with confidence."}</em></h1>
+          <p>{hindi ? "WoolTrace हर बैच को सत्यापित पहचान देता है, किसानों को भरोसेमंद खरीदारों से सीधे जोड़ता है और कतराई से कपड़े तक पूरी यात्रा दिखाता है।" : "WoolTrace gives every batch a verified identity, connects farmers directly with trusted buyers, and keeps the whole journey visible from shearing to fabric."}</p>
+          <div className="khet-hero-actions"><a className="khet-primary" href="/dashboard">{hindi ? "WoolTrace देखें" : "Explore WoolTrace"} <ArrowRight /></a><a className="khet-secondary" href="#how">{hindi ? "कार्यप्रणाली देखें" : "See how it works"} <ChevronRight /></a></div>
+          <div className="khet-proof"><div className="khet-avatars"><span>R</span><span>S</span><span>A</span><span>+</span></div><p><strong>{hindi ? "किसान केंद्र में" : "Built with farmers at the centre"}</strong><small>{hindi ? "किसान · खरीदार · मूल्यांकनकर्ता · प्रसंस्करणकर्ता" : "Farmers · buyers · assessors · processors"}</small></p></div>
         </div>
         <div className="khet-visual">
           <div className="khet-photo-card"><Image src="/wooltrace-hero.png" alt="Indian wool farmer holding freshly shorn wool beside sheep" fill priority sizes="(max-width: 900px) 92vw, 46vw" className="object-cover" /><div className="khet-photo-label"><ShieldCheck /><div><strong>Origin verified</strong><span>Gulmarg · Kashmir Merino</span></div></div></div>

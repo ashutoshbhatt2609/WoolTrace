@@ -1,5 +1,5 @@
 import {
-  BadgeCheck, Factory, FlaskConical, HandCoins, Landmark, PackageCheck,
+  Factory, FlaskConical, HandCoins, Landmark, PackageCheck,
   Scissors, ShieldCheck, ShoppingBag, Store, Truck, Warehouse,
 } from "lucide-react";
 

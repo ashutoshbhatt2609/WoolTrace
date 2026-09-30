@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   BadgeCheck, BarChart3, Bell, Boxes, ChevronRight, ClipboardCheck, Gauge,
@@ -48,7 +49,7 @@ export default function DashboardClient({ user }: { user: GoogleUser }) {
   const [saveError, setSaveError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [search, setSearch] = useState("");
-  const [popover, setPopover] = useState<"notifications" | "settings" | null>(null);
+  const [popover, setPopover] = useState<"notifications" | "settings" | "profile" | null>(null);
   const bestValue = useMemo(() => batches.reduce((sum, batch) => sum + batch.weight * batch.price, 0), [batches]);
   const visibleBatches = useMemo(() => batches.filter((batch) => `${batch.id} ${batch.breed} ${batch.status}`.toLowerCase().includes(search.toLowerCase())), [batches, search]);
 
@@ -105,7 +106,7 @@ export default function DashboardClient({ user }: { user: GoogleUser }) {
   return (
     <main className="app-shell">
       <aside className={`app-sidebar ${mobile ? "show" : ""}`}>
-        <div className="app-logo"><span className="brand-mark"><Sprout className="size-4" /></span><span>WoolTrace</span><button onClick={() => setMobile(false)}><X /></button></div>
+        <div className="app-logo"><span className="brand-mark"><Sprout className="size-4" /></span><span>WoolTrace</span><button aria-label="Close navigation" onClick={() => setMobile(false)}><X /></button></div>
         <p className="side-label">WORKSPACE</p>
         <nav>{modules.map(([label, Icon]) => label === "Overview" ? <button className="active" key={label} onClick={() => { setActive("Overview"); setMobile(false); }}><Icon /><span>{label}</span></button> : <Link key={label} href={`/workspace/${label.toLowerCase().replace(/\s+/g, "-")}`}><Icon /><span>{label}</span>{label === "Reverse bidding" && <b>Live</b>}</Link>)}</nav>
         <div className="side-bottom"><Link href="/portals"><UsersRound /> Switch portal</Link><Link href="/integrations"><PlugZap /> API & production setup</Link><button onClick={() => setPopover("settings")}><Settings /> Settings</button><a href="/api/auth/logout"><LogOut /> Sign out</a></div>
@@ -113,9 +114,9 @@ export default function DashboardClient({ user }: { user: GoogleUser }) {
 
       <section className="app-main">
         <header className="app-header">
-          <button className="app-menu" onClick={() => setMobile(true)}><Menu /></button>
+          <button className="app-menu" aria-label="Open navigation" onClick={() => setMobile(true)}><Menu /></button>
           <div><p className="kicker">FARMER WORKSPACE</p><h1>{active}</h1></div>
-          <div className="app-actions"><label><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search batches" /></label><Link className="portal-switch" href="/portals"><UsersRound /> Portals</Link><button className="icon-button" aria-label="Notifications" onClick={() => setPopover(popover === "notifications" ? null : "notifications")}><Bell /></button><button className="language" onClick={() => setLanguage(language === "English" ? "हिन्दी" : "English")}><Languages /> {language}</button><div className="avatar">{user.picture ? <img src={user.picture} alt="" /> : user.name[0]}</div>{popover === "notifications" && <div className="app-popover"><strong>Notifications</strong><p>Weather and traceability data are connected.</p><p>Demo batch WT-2408-KAS has 7 sample offers.</p><button onClick={() => setPopover(null)}>Mark as read</button></div>}</div>
+          <div className="app-actions"><label><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search batches" aria-label="Search wool batches" /></label><Link className="portal-switch" href="/portals"><UsersRound /> Portals</Link><button className="icon-button" aria-label="Notifications" aria-expanded={popover === "notifications"} onClick={() => setPopover(popover === "notifications" ? null : "notifications")}><Bell /></button><button className="language" aria-label="Change interface language" onClick={() => setPopover("settings")}><Languages /> {language}</button><button className="avatar" aria-label="Open account menu" aria-expanded={popover === "profile"} onClick={() => setPopover(popover === "profile" ? null : "profile")}>{user.picture ? <Image unoptimized src={user.picture} width={40} height={40} alt={`${user.name} profile`} /> : user.name[0]}</button>{popover === "notifications" && <div className="app-popover" role="status"><strong>Notifications</strong><p>Weather and traceability data are connected.</p><p>Demo batch WT-2408-KAS has 7 sample offers.</p><button onClick={() => setPopover(null)}>Mark as read</button></div>}{popover === "profile" && <div className="app-popover profile-popover"><strong>{user.name}</strong><small>{user.email}</small><p>Signed in to the farmer workspace.</p><Link href="/portals">Switch stakeholder portal</Link><a href="/api/auth/logout">Sign out</a></div>}</div>
         </header>
 
         {active === "Overview" ? <>
@@ -139,8 +140,8 @@ export default function DashboardClient({ user }: { user: GoogleUser }) {
         </> : <ModuleView name={active} onCreate={() => setShowCreate(true)} batches={batches} />}
       </section>
 
-      {popover === "settings" && <div className="modal-backdrop"><div className="portal-modal"><button className="modal-close" onClick={() => setPopover(null)}><X /></button><Settings /><p className="kicker">WORKSPACE SETTINGS</p><h2>Your preferences</h2><p>Choose the interface language, move to another stakeholder portal or review production connections.</p><label>Language<select value={language} onChange={(event) => setLanguage(event.target.value)}><option>English</option><option>हिन्दी</option></select></label><Link className="lime-button settings-link" href="/portals"><UsersRound /> Choose portal</Link><Link className="setup-text-link" href="/integrations"><PlugZap /> API & production setup</Link></div></div>}
-      {showCreate && <div className="modal-backdrop"><form className="batch-modal" onSubmit={createBatch}><button type="button" className="modal-close" onClick={() => setShowCreate(false)}><X /></button><p className="kicker">NEW DIGITAL PASSPORT</p><h2>Register a wool batch</h2><p>Start the verified history at the point of shearing. This record is saved securely to WoolTrace.</p><label>Breed<input name="breed" required placeholder="e.g. Kashmir Merino" /></label><div className="form-pair"><label>Weight (kg)<input name="weight" required min="1" type="number" /></label><label>Reserve ₹/kg<input name="reserve" required min="0" type="number" /></label></div><label>Shearing date<input name="date" required type="date" /></label>{saveError && <p className="form-error">{saveError}</p>}<button className="lime-button" type="submit" disabled={isSaving}>{isSaving ? "Saving batch…" : "Create batch & QR"} <QrCode /></button></form></div>}
+      {popover === "settings" && <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="portal-modal"><button aria-label="Close settings" className="modal-close" onClick={() => setPopover(null)}><X /></button><Settings /><p className="kicker">WORKSPACE SETTINGS</p><h2 id="settings-title">Your preferences</h2><p>Choose the interface language, move to another stakeholder portal or review production connections.</p><label>Language<select value={language} onChange={(event) => { setLanguage(event.target.value); document.documentElement.lang = event.target.value === "हिन्दी" ? "hi" : "en"; }}><option>English</option><option>हिन्दी</option></select></label><Link className="lime-button settings-link" href="/portals"><UsersRound /> Choose portal</Link><Link className="setup-text-link" href="/integrations"><PlugZap /> API & production setup</Link></div></div>}
+      {showCreate && <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="create-title"><form className="batch-modal" onSubmit={createBatch}><button type="button" aria-label="Close batch form" className="modal-close" onClick={() => setShowCreate(false)}><X /></button><p className="kicker">NEW DIGITAL PASSPORT</p><h2 id="create-title">Register a wool batch</h2><p>Start the verified history at the point of shearing. This record is saved securely to WoolTrace.</p><label>Breed<input name="breed" required placeholder="e.g. Kashmir Merino" /></label><div className="form-pair"><label>Weight (kg)<input name="weight" required min="1" type="number" /></label><label>Reserve ₹/kg<input name="reserve" required min="0" type="number" /></label></div><label>Shearing date<input name="date" required type="date" /></label>{saveError && <p className="form-error">{saveError}</p>}<button className="lime-button" type="submit" disabled={isSaving}>{isSaving ? "Saving batch…" : "Create batch & QR"} <QrCode /></button></form></div>}
     </main>
   );
 }

@@ -1,6 +1,9 @@
 import { ArrowLeft, BadgeCheck, MapPin, ShieldCheck, Sprout } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
+import QRCode from "qrcode";
 import { getDb } from "@/db";
 import { batchEvents, users, woolBatches } from "@/db/schema";
 import { woolStages } from "@/app/lib/portals";
@@ -23,8 +26,9 @@ const demoEvents = [
 
 export default async function BatchPassport({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  let record = { breed: "Kashmir Merino", grade: "A", weight: 184, shearing: "12 Sep 2026", owner: "Rafiq Ahmad", origin: "Rafiq Wool Farm · Gulmarg, Baramulla, Jammu & Kashmir", micron: "20.4 μm", staple: "82 mm" };
-  let events: { title: string; detail: string; date: string }[] = demoEvents.map(([title, detail, date]) => ({ title, detail, date }));
+  const isSample = id === "WT-2408-KAS";
+  let record: { breed: string; grade: string; weight: number; shearing: string; owner: string; origin: string; micron: string; staple: string } | null = isSample ? { breed: "Kashmir Merino", grade: "A", weight: 184, shearing: "12 Sep 2026", owner: "Rafiq Ahmad", origin: "Rafiq Wool Farm · Gulmarg, Baramulla, Jammu & Kashmir", micron: "20.4 μm", staple: "82 mm" } : null;
+  let events: { title: string; detail: string; date: string }[] = isSample ? demoEvents.map(([title, detail, date]) => ({ title, detail, date })) : [];
 
   try {
     const db = getDb();
@@ -45,15 +49,17 @@ export default async function BatchPassport({ params }: { params: Promise<{ id: 
       events = storedEvents.map((event) => ({ title: event.title, detail: event.location ?? event.notes ?? "Verified WoolTrace event", date: event.occurredAt.toLocaleDateString("en-IN", { day: "2-digit", month: "short" }) }));
     }
   } catch {
-    // The public demo passport remains available if the live database is temporarily unavailable.
+    // Only the named sample passport remains available if the database is unavailable.
   }
 
+  if (!record) notFound();
+
   const passportUrl = `https://wooltrace-farm-to-fabric.witty-clock-9839.chatgpt.site/batch/${encodeURIComponent(id)}`;
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(passportUrl)}`;
+  const qrUrl = await QRCode.toDataURL(passportUrl, { width: 220, margin: 2, errorCorrectionLevel: "M", color: { dark: "#102b20", light: "#ffffff" } });
 
   return <main className="passport-shell">
     <header className="passport-nav"><Link href="/"><span className="brand-mark"><Sprout className="size-4" /></span> WoolTrace</Link><Link href="/dashboard"><ArrowLeft /> Dashboard</Link></header>
-    <section className="passport-hero"><div><p className="kicker light">PUBLIC WOOL PASSPORT</p><h1>{id}</h1><p>{record.breed} · Grade {record.grade} · {record.weight} kg</p><span><BadgeCheck /> Chain of custody verified</span></div><div className="passport-qr"><img src={qrUrl} alt={`QR code for wool batch ${id}`} /><small>Scan this batch</small></div></section>
+    <section className="passport-hero"><div><p className="kicker light">PUBLIC WOOL PASSPORT</p><h1>{id}</h1><p>{record.breed} · Grade {record.grade} · {record.weight} kg</p><span><BadgeCheck /> Chain of custody verified</span></div><div className="passport-qr"><Image unoptimized width={108} height={108} src={qrUrl} alt={`QR code for wool batch ${id}`} /><small>Scan this batch</small></div></section>
     <section className="passport-grid"><article className="passport-main"><div className="passport-heading"><div><p className="kicker">WOOL ORIGIN</p><h2>{record.owner}</h2><p><MapPin /> {record.origin}</p></div><span className="verified-pill"><ShieldCheck /> Verified source record</span></div><div className="passport-facts"><div><small>Breed</small><strong>{record.breed}</strong></div><div><small>Shearing</small><strong>{record.shearing}</strong></div><div><small>Net weight</small><strong>{record.weight} kg</strong></div><div><small>Current owner</small><strong>{record.owner}</strong></div></div><hr /><p className="kicker">QUALITY ASSESSMENT</p><div className="quality-grid"><div><strong>{record.micron}</strong><span>Fibre diameter</span></div><div><strong>{record.staple}</strong><span>Staple length</span></div><div><strong>{record.grade === "Pending" ? "Pending" : "68%"}</strong><span>Clean yield</span></div><div><strong>{record.grade}</strong><span>Assigned grade</span></div></div><PassportActions batchId={id} /></article><aside className="passport-side"><p className="kicker">CHAIN OF CUSTODY</p><h2>Wool to finished product</h2>{events.map((event, index) => <div className="passport-event done" key={`${event.title}-${index}`}><span>{index + 1}</span><p><strong>{event.title}</strong><small>{event.detail}</small></p><time>{event.date}</time></div>)}</aside></section>
     <section className="passport-lifecycle"><p className="kicker">PASSPORT COVERAGE</p><h2>Every stage this QR can verify</h2><div>{woolStages.map((stage, index) => { const Icon = stage.icon; return <article key={stage.key}><span>{index + 1}</span><Icon /><h3>{stage.title}</h3><p>{stage.detail}</p><small>{stage.owner}</small></article>; })}</div></section>
     <footer className="passport-footer"><ShieldCheck /><div><strong>What this record proves</strong><p>This passport links the wool’s farm origin, shearing, quality, sale, custody, processing, fabric manufacture and final product. Every update is attributed to the portal responsible for that stage.</p></div></footer>
