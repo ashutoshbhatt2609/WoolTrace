@@ -7,6 +7,8 @@ export const users = sqliteTable("users", {
   picture: text("picture"),
   role: text("role", { enum: ["farmer", "buyer", "partner", "admin"] }).notNull().default("farmer"),
   locale: text("locale").notNull().default("en"),
+  upiVpa: text("upi_vpa"),
+  upiName: text("upi_name"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
 });
 

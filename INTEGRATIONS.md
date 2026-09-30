@@ -26,7 +26,7 @@ Add a restricted Google Maps Platform server key as `GOOGLE_MAPS_API_KEY`. Enabl
 
 ## Payments
 
-Start with Razorpay test mode. Add `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET`. The production payment workflow must create orders server-side and verify payment signatures/webhooks before a batch is marked paid.
+Payments use seller-owned BHIM / UPI QR codes, so no payment-gateway credentials are needed. The seller saves their UPI ID and display name in the Reverse bidding workspace. After an offer is accepted, WoolTrace creates an exact-value UPI payment request for that batch. The seller must verify the credit in their own bank or UPI app before releasing the wool; a QR scan by itself is not proof of payment.
 
 ## Logistics and laboratory integrations
 
