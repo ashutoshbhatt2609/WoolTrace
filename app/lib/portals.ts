@@ -62,7 +62,7 @@ export const portalDefinitions = {
   admin: {
     name: "Admin portal", short: "Admin", icon: ShieldCheck,
     description: "Verify organizations, investigate exceptions and audit the full chain of custody.",
-    actions: ["Verify a stakeholder", "Review disputed events", "Suspend suspicious records", "Export audit trail"],
+    actions: ["Verify farm source", "Review disputed events", "Suspend suspicious records", "Export audit trail"],
     owns: ["Verification", "Compliance", "Audit"],
   },
 } as const;

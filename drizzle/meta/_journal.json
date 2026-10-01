@@ -15,6 +15,13 @@
       "when": 1790686460460,
       "tag": "0001_awesome_felicia_hardy",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790847775026,
+      "tag": "0002_free_mantis",
+      "breakpoints": true
     }
   ]
 }

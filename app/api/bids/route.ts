@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 import { getGoogleUser } from "@/app/lib/google-auth";
 import { ensureUser } from "@/app/lib/ensure-user";
-import { bids, woolBatches } from "@/db/schema";
+import { hashBatchEvent } from "@/app/lib/event-integrity";
+import { batchEvents, bids, woolBatches } from "@/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,12 @@ export async function PATCH(request: Request) {
   const [batch] = await db.select().from(woolBatches).where(and(eq(woolBatches.id, bid.batchId), eq(woolBatches.farmerId, user.sub))).limit(1);
   if (!batch) return NextResponse.json({ error: "Only the batch owner can accept this offer." }, { status: 403 });
   await db.update(bids).set({ status: "accepted" }).where(eq(bids.id, bid.id));
+  await db.update(bids).set({ status: "not_selected" }).where(and(eq(bids.batchId, batch.id), ne(bids.id, bid.id)));
   await db.update(woolBatches).set({ status: "sold", currentOwnerId: bid.buyerId }).where(eq(woolBatches.id, batch.id));
+  const now = new Date();
+  const notes = `Accepted ₹${bid.pricePerKg}/kg; pickup in ${bid.pickupDays} days; ${bid.paymentTerms}. New owner reference: ${bid.buyerId}.`;
+  const [lastEvent] = await db.select({ eventHash: batchEvents.eventHash }).from(batchEvents).where(eq(batchEvents.batchId, batch.id)).orderBy(desc(batchEvents.occurredAt)).limit(1);
+  const eventHash = await hashBatchEvent({ batchId: batch.id, eventType: "offer_accepted", title: "Farmer accepted the winning buyer offer", actorId: user.sub, actorRole: "farmer", notes, occurredAt: now, previousHash: lastEvent?.eventHash ?? null });
+  await db.insert(batchEvents).values({ id: crypto.randomUUID(), batchId: batch.id, eventType: "offer_accepted", title: "Farmer accepted the winning buyer offer", actorId: user.sub, actorRole: "farmer", notes, previousHash: lastEvent?.eventHash ?? null, eventHash, verified: true, occurredAt: now });
   return NextResponse.json({ ok: true });
 }

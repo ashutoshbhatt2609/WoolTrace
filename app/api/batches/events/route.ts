@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getGoogleUser } from "@/app/lib/google-auth";
+import { hashBatchEvent } from "@/app/lib/event-integrity";
 import { getDb } from "@/db";
 import { batchEvents, users, woolBatches } from "@/db/schema";
 import { isPortalRole } from "@/app/lib/portals";
@@ -33,14 +34,22 @@ export async function POST(request: Request) {
   }
 
   const now = new Date();
+  const eventType = `${parsed.data.portalRole}:${parsed.data.title.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "")}`;
+  const notes = parsed.data.notes || `Recorded from the ${parsed.data.portalRole} portal.`;
+  const [lastEvent] = await db.select({ eventHash: batchEvents.eventHash }).from(batchEvents).where(eq(batchEvents.batchId, parsed.data.batchId)).orderBy(desc(batchEvents.occurredAt)).limit(1);
+  const eventHash = await hashBatchEvent({ batchId: parsed.data.batchId, eventType, title: parsed.data.title, location: parsed.data.location || null, actorId: user.sub, actorRole: parsed.data.portalRole, notes, occurredAt: now, previousHash: lastEvent?.eventHash ?? null });
   await db.insert(batchEvents).values({
     id: crypto.randomUUID(),
     batchId: parsed.data.batchId,
-    eventType: `${parsed.data.portalRole}:${parsed.data.title.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "")}`,
+    eventType,
     title: parsed.data.title,
     location: parsed.data.location || null,
     actorId: user.sub,
-    notes: parsed.data.notes || `Recorded from the ${parsed.data.portalRole} portal.`,
+    actorRole: parsed.data.portalRole,
+    notes,
+    previousHash: lastEvent?.eventHash ?? null,
+    eventHash,
+    verified: true,
     occurredAt: now,
   });
   await db.update(woolBatches).set({ status: parsed.data.title.toLowerCase().replace(/[^a-z0-9]+/g, "_") }).where(eq(woolBatches.id, parsed.data.batchId));
