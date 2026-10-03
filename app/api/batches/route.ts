@@ -1,127 +1,46 @@
-import { NextResponse } from "next/server";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { z } from "zod";
-import { getGoogleUser } from "@/app/lib/google-auth";
-import { hashBatchEvent } from "@/app/lib/event-integrity";
+import { api, ApiError, body, json } from "@/app/lib/api";
+import { appendEvent, getBatch, requireOwner } from "@/app/lib/batch-access";
 import { getDb } from "@/db";
-import { batchEvents, farms, users, woolBatches } from "@/db/schema";
+import { batchParticipants, bids, farms, woolBatches } from "@/db/schema";
 
-export const dynamic = "force-dynamic";
-
-const batchInput = z.object({
-  breed: z.string().trim().min(2).max(80),
-  weight: z.coerce.number().positive().max(100000),
-  reserve: z.coerce.number().nonnegative().max(1000000),
-  date: z.coerce.date(),
-  farmName: z.string().trim().min(2).max(100),
-  village: z.string().trim().min(2).max(100),
-  district: z.string().trim().min(2).max(100),
-  state: z.string().trim().min(2).max(100),
-  shearer: z.string().trim().min(2).max(100),
+const input = z.object({
+ breed:z.string().trim().min(2).max(80), weight:z.coerce.number().positive().max(100000),
+ reserve:z.coerce.number().nonnegative().max(1000000), date:z.coerce.date(),
+ farmName:z.string().trim().min(2).max(100), village:z.string().trim().min(2).max(100),
+ district:z.string().trim().min(2).max(100), state:z.string().trim().min(2).max(100), shearer:z.string().trim().min(2).max(100)
 });
-
-export async function GET(request: Request) {
-  const user = await getGoogleUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const db = getDb();
-  const marketplace = new URL(request.url).searchParams.get("scope") === "marketplace";
-  const records = marketplace
-    ? await db.select().from(woolBatches).orderBy(desc(woolBatches.createdAt)).limit(50)
-    : await db.select().from(woolBatches).where(eq(woolBatches.farmerId, user.sub)).orderBy(desc(woolBatches.createdAt));
-  return NextResponse.json({ batches: records.map(toDashboardBatch) }, { headers: { "Cache-Control": "no-store" } });
-}
-
-export async function POST(request: Request) {
-  const user = await getGoogleUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const parsed = batchInput.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Please complete the farm, shearing, breed, weight and reserve-price details." }, { status: 400 });
-  }
-
-  const now = new Date();
-  const batchId = `WT-${now.getFullYear().toString().slice(-2)}${String(now.getMonth() + 1).padStart(2, "0")}-${crypto.randomUUID().slice(0, 5).toUpperCase()}`;
-  const farmId = `FARM-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-  const db = getDb();
-
-  await db.insert(users).values({
-    id: user.sub,
-    email: user.email,
-    name: user.name,
-    picture: user.picture ?? null,
-    role: "farmer",
-    locale: "en",
-    createdAt: now,
-  }).onConflictDoUpdate({
-    target: users.id,
-    set: { email: user.email, name: user.name, picture: user.picture ?? null },
-  });
-
-  await db.insert(farms).values({
-    id: farmId,
-    ownerId: user.sub,
-    name: parsed.data.farmName,
-    village: parsed.data.village,
-    district: parsed.data.district,
-    state: parsed.data.state,
-    flockSize: 0,
-  });
-
-  await db.insert(woolBatches).values({
-    id: batchId,
-    farmerId: user.sub,
-    farmId,
-    breed: parsed.data.breed,
-    shearedAt: parsed.data.date,
-    weightKg: parsed.data.weight,
-    grade: "Pending",
-    status: "shearing_started",
-    reservePrice: parsed.data.reserve,
-    currentOwnerId: user.sub,
-    createdAt: now,
-  });
-
-  const eventNotes = `Source recorded by the farmer. Shearer or team: ${parsed.data.shearer}. Expected wool weight: ${parsed.data.weight} kg.`;
-  const eventHash = await hashBatchEvent({ batchId, eventType: "shearing_started", title: "Shearing started and source batch registered", location: `${parsed.data.farmName}, ${parsed.data.village}, ${parsed.data.district}, ${parsed.data.state}`, actorId: user.sub, actorRole: "farmer", notes: eventNotes, occurredAt: now });
-  await db.insert(batchEvents).values({
-    id: crypto.randomUUID(),
-    batchId,
-    eventType: "shearing_started",
-    title: "Shearing started and source batch registered",
-    location: `${parsed.data.farmName}, ${parsed.data.village}, ${parsed.data.district}, ${parsed.data.state}`,
-    actorId: user.sub,
-    actorRole: "farmer",
-    notes: eventNotes,
-    eventHash,
-    verified: true,
-    occurredAt: now,
-  });
-
-  return NextResponse.json({
-    batch: {
-      id: batchId,
-      breed: parsed.data.breed,
-      weight: parsed.data.weight,
-      grade: "Pending",
-      status: "Shearing started",
-      bids: 0,
-      price: parsed.data.reserve,
-      source: "live",
-    },
-  }, { status: 201 });
-}
-
-function toDashboardBatch(batch: typeof woolBatches.$inferSelect) {
-  return {
-    id: batch.id,
-    breed: batch.breed,
-    weight: batch.weightKg,
-    grade: batch.grade,
-    status: batch.status.replace(/(^|_)([a-z])/g, (_, space, letter) => `${space ? " " : ""}${letter.toUpperCase()}`),
-    bids: 0,
-    price: batch.reservePrice,
-    source: "live" as const,
-  };
-}
+export const GET=api(async(request,user)=>{
+ const db=getDb();
+ const invites=await db.select({id:batchParticipants.batchId}).from(batchParticipants).where(eq(batchParticipants.email,user.email.toLowerCase()));
+ const marketplace=new URL(request.url).searchParams.get("scope")==="marketplace";
+ const records=await db.select().from(woolBatches).where(marketplace ? eq(woolBatches.saleStatus,"listed") : or(eq(woolBatches.farmerId,user.sub),eq(woolBatches.currentOwnerId,user.sub),inArray(woolBatches.id,invites.map(i=>i.id)))).orderBy(desc(woolBatches.createdAt)).limit(200);
+ const offers=records.length ? await db.select({batchId:bids.batchId}).from(bids).where(and(inArray(bids.batchId,records.map(b=>b.id)),eq(bids.status,"active"))) : [];
+ return json({batches:records.map(b=>({...b,weight:b.weightKg,price:b.reservePrice,source:"live",isOwner:b.currentOwnerId===user.sub,isFarmer:b.farmerId===user.sub,bids:offers.filter(o=>o.batchId===b.id).length}))});
+});
+export const POST=api(async(request,user,member)=>{
+ if(member.role!=="farmer") throw new ApiError(403,"Choose the farmer role in your profile to register wool.");
+ const data=await body(request,input);
+ if(data.date.getTime()>Date.now()+86400000) throw new ApiError(400,"The shearing start date cannot be in the future.");
+ const id="WT-"+crypto.randomUUID().toUpperCase();
+ await getDb().transaction(async tx=>{
+  const farmId=crypto.randomUUID();
+  await tx.insert(farms).values({id:farmId,ownerId:user.sub,name:data.farmName,village:data.village,district:data.district,state:data.state});
+  await tx.insert(woolBatches).values({id,farmerId:user.sub,farmId,breed:data.breed,shearedAt:data.date,weightKg:data.weight,reservePrice:data.reserve,currentOwnerId:user.sub,status:"shearing_started",createdAt:new Date()});
+  await appendEvent(tx,{batchId:id,eventType:"shearing_started",title:"Shearing started",actorId:user.sub,actorRole:"farmer",location:[data.farmName,data.village,data.district,data.state].join(", "),notes:"Farmer-reported start: "+data.date.toISOString().slice(0,10)+". Shearer/team: "+data.shearer+". Expected weight: "+data.weight+" kg."});
+ });
+ return json({batch:{id}},201);
+});
+export const PATCH=api(async(request,user)=>{
+ const data=await body(request,z.object({batchId:z.string(),reserve:z.coerce.number().nonnegative().max(1000000),listed:z.boolean()}));
+ await getDb().transaction(async tx=>{
+  const batch=await getBatch(tx,data.batchId); requireOwner(batch,user.sub);
+  if(batch.farmerId!==user.sub) throw new ApiError(403,"Only the source farmer can list this batch.");
+  if(!batch.completedAt) throw new ApiError(409,"Complete shearing with a photo before listing.");
+  if(["accepted","paid"].includes(batch.saleStatus)) throw new ApiError(409,"This batch already has an accepted sale.");
+  await tx.update(woolBatches).set({reservePrice:data.reserve,saleStatus:data.listed?"listed":"unlisted"}).where(eq(woolBatches.id,batch.id));
+  await appendEvent(tx,{batchId:batch.id,eventType:"listing_updated",title:data.listed?"Batch listed for direct offers":"Batch removed from marketplace",actorId:user.sub,actorRole:"farmer",notes:"Reserve price: ₹"+data.reserve+"/kg."});
+ });
+ return json({ok:true});
+});

@@ -1,57 +1,31 @@
 import "server-only";
 import { cookies } from "next/headers";
-
-export type GoogleUser = { sub: string; email: string; name: string; picture?: string };
-export const SESSION_COOKIE = "wooltrace_session";
-export const STATE_COOKIE = "wooltrace_oauth_state";
-export const DEMO_COOKIE = "wooltrace_demo_session";
-
-const encode = (input: Uint8Array | string) => {
-  const bytes = typeof input === "string" ? new TextEncoder().encode(input) : input;
-  let binary = "";
-  bytes.forEach((byte) => (binary += String.fromCharCode(byte)));
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-};
-
-const decode = (input: string) => {
-  const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
-  return decodeURIComponent(Array.from(atob(normalized), (c) => `%${c.charCodeAt(0).toString(16).padStart(2, "0")}`).join(""));
-};
-
-async function signature(value: string) {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret) return null;
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  return encode(new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(value))));
+import { createHmac, timingSafeEqual } from "node:crypto";
+import { z } from "zod";
+export type GoogleUser={sub:string;email:string;name:string;picture?:string};
+export const SESSION_COOKIE="wooltrace_session";
+export const STATE_COOKIE="wooltrace_oauth_state";
+export const VERIFIER_COOKIE="wooltrace_oauth_verifier";
+export const DEMO_COOKIE="wooltrace_demo_session";
+const profile=z.object({sub:z.string().min(1).max(255),email:z.string().email(),name:z.string().min(1).max(255),picture:z.string().url().optional()});
+function signature(value:string){return createHmac("sha256",process.env.AUTH_SECRET!).update(value).digest("base64url");}
+export function googleAuthConfigured(){return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && (process.env.AUTH_SECRET?.length??0)>=32);}
+export async function createSession(user:GoogleUser){
+ if((process.env.AUTH_SECRET?.length??0)<32) throw new Error("Session secret must contain at least 32 characters");
+ const payload=Buffer.from(JSON.stringify({...profile.parse(user),exp:Date.now()+1209600000})).toString("base64url");
+ return payload+"."+signature(payload);
 }
-
-export function googleAuthConfigured() {
-  return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.AUTH_SECRET);
-}
-
-export async function createSession(user: GoogleUser) {
-  const payload = encode(JSON.stringify({ ...user, exp: Date.now() + 1000 * 60 * 60 * 24 * 14 }));
-  const sig = await signature(payload);
-  if (!sig) throw new Error("AUTH_SECRET is missing");
-  return `${payload}.${sig}`;
-}
-
-export async function getGoogleUser(): Promise<GoogleUser | null> {
-  const cookieStore = await cookies();
-  if (process.env.DEMO_MODE === "true" && cookieStore.get(DEMO_COOKIE)?.value === "farmer") {
-    return {
-      sub: "demo-farmer",
-      email: "farmer.demo@wooltrace.in",
-      name: "Rafiq Ahmad",
-    };
-  }
-  const value = cookieStore.get(SESSION_COOKIE)?.value;
-  if (!value) return null;
-  const [payload, supplied] = value.split(".");
-  if (!payload || !supplied || (await signature(payload)) !== supplied) return null;
-  try {
-    const parsed = JSON.parse(decode(payload));
-    if (!parsed.exp || parsed.exp < Date.now()) return null;
-    return { sub: parsed.sub, email: parsed.email, name: parsed.name, picture: parsed.picture };
-  } catch { return null; }
+export async function getGoogleUser():Promise<GoogleUser|null>{
+ const jar=await cookies();
+ if(process.env.DEMO_MODE==="true" && jar.get(DEMO_COOKIE)?.value==="farmer") return {sub:"demo-farmer",email:"farmer.demo@wooltrace.in",name:"Demo farmer"};
+ const value=jar.get(SESSION_COOKIE)?.value;
+ if(!value || value.length>6000 || !process.env.AUTH_SECRET) return null;
+ try{
+  const parts=value.split("."); if(parts.length!==2) return null;
+  const expected=Buffer.from(signature(parts[0]));const supplied=Buffer.from(parts[1]);
+  if(expected.length!==supplied.length || !timingSafeEqual(expected,supplied)) return null;
+  const parsed=profile.extend({exp:z.number().finite()}).parse(JSON.parse(Buffer.from(parts[0],"base64url").toString()));
+  if(parsed.exp<Date.now() || parsed.exp>Date.now()+1209660000) return null;
+  return {sub:parsed.sub,email:parsed.email,name:parsed.name,picture:parsed.picture};
+ }catch{return null;}
 }

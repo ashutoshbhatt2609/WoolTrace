@@ -1,91 +1,44 @@
 # WoolTrace
 
-WoolTrace is a farmer-first wool traceability and direct-commerce platform focused on Karnataka. A farmer starts a wool batch when shearing begins, records the completed shearing with a compressed photo, and keeps later quality, sale, transport, storage and processing events on one QR-linked public passport.
+A Karnataka-focused wool traceability and direct-commerce app. Farmers record the source and shearing photo; invited partners add later stages; buyers make direct offers. Public batch and product-lot QR pages keep the original farmer visible.
 
-WoolTrace currently provides a traceability record, not a government certification. Farm documents and administrator approval are intentionally not required in the present workflow.
+**A traceability record, not a certification authority.** Google sign-in does not verify a farm. Labs are owner-invited, not accredited by WoolTrace.
 
-## Product features
-
-- Google sign-in, plus an optional demo login for development and presentations
-- Farmer, buyer, laboratory, transporter, warehouse, processor and brand portals
-- Shearing start and completion records with client-side photo compression
-- Hash-linked wool lifecycle events and public QR passports
-- Reverse bidding and direct seller-owned BHIM/UPI payment QR codes
-- Quality-result entry, bookings, weather and optional government market data
-- Karnataka laboratory and sheep-and-wool outreach directory
-- Responsive landing page and workspace
-
-## Technology
-
-- Next.js 16, React 19 and TypeScript
-- Turso/libSQL with Drizzle ORM
-- Google OAuth implemented without a third-party auth service
-- Vercel deployment
+## Stack
+Next.js 16.3.8, React 19, TypeScript, Drizzle and Turso/libSQL. Vercel hosts the application.
 
 ## Local setup
+Use Node.js 22.13+ (Vercel uses Node 24). Install with npm ci, copy .env.example to .env.local, fill your own values, run npm run db:migrate and npm run dev.
+APP_BASE_URL must be http://localhost:3000 for local sign-in, with the matching Google OAuth callback.
 
-Requirements: Node.js 22.13 or newer and a Turso database.
-
-```bash
-npm install
-cp .env.example .env.local
-npm run db:migrate
-npm run dev
-```
-
-Open `http://localhost:3000`.
-
-For a presentation without Google credentials, set `DEMO_MODE=true`. Do not use demo mode for a public production launch.
-
-## Environment variables
-
-Required for persistent data:
-
-- `TURSO_DATABASE_URL`
-- `TURSO_AUTH_TOKEN`
-- `AUTH_SECRET` — a long random secret used to sign login sessions
-
-Required for real Google sign-in:
-
-- `GOOGLE_CLIENT_ID`
-- `GOOGLE_CLIENT_SECRET`
-- `APP_BASE_URL` — the public Vercel URL, without a trailing slash
-
-Optional:
-
-- `DEMO_MODE`
-- `FARM_LATITUDE`, `FARM_LONGITUDE`, `FARM_LOCATION_NAME`
-- `DATA_GOV_IN_API_KEY`, `AGMARKNET_RESOURCE_ID`
-
-Never commit `.env.local`, `.vercel`, OAuth secrets or database tokens. They are already ignored by Git.
-
-## Google OAuth callback
-
-Create a Web application in Google Cloud Console and add this authorised redirect URI:
-
-```text
-https://YOUR-VERCEL-DOMAIN/api/auth/google/callback
-```
-
-For local development also add:
-
-```text
-http://localhost:3000/api/auth/google/callback
-```
+Never commit .env files. Optional demo mode is for isolated development only; production uses DEMO_MODE=false.
 
 ## Checks
+- npm run lint
+- npm run build
+- node scripts/test-workflows.mjs — isolated temporary database; no production records.
+- npm audit --omit=dev --audit-level=high
 
-```bash
-npm run lint
-npm run build
-```
+The GitHub Actions workflow runs the same checks. Development-tool advisories need separate review; do not force incompatible framework downgrades.
 
-## Deploy to Vercel
+## Deployment
+The Git-connected Vercel project is **wool-trace**, serving https://wool-trace.vercel.app.
+vercel.json runs transactional, additive migrations before production builds. A failed migration stops deployment promotion. Use a separate database for previews and migrate it explicitly.
+Check /api/health after deployment and complete an actual Google sign-in.
 
-1. Push this directory to GitHub.
-2. Import the repository in Vercel as a Next.js project.
-3. Add the required environment variables in Vercel project settings.
-4. Run `npm run db:migrate` once with the Turso variables available.
-5. Deploy.
+## Features
+- Google OAuth with PKCE, validated signed sessions and role onboarding.
+- Farm source registration, shearing completion and compressed JPEG evidence.
+- Farmer listings, buyer offers, atomic acceptance and seller-confirmed UPI payments.
+- Ownership-controlled partner invitations and stage updates.
+- Laboratory measurements and participant-attributed public history.
+- Weight-constrained child lots with parent and source-batch QR links.
+- Service planning and Karnataka lab outreach directory.
+- Optional licensed weather integration, responsive workspace and real account metrics.
 
-Vercel automatically runs `npm run build`.
+## Setup and operating boundaries
+See [API_SETUP.md](API_SETUP.md) for required/optional keys and provider links.
+See [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md) for launch checks and operator responsibilities.
+See [design.md](design.md) for design rules.
+
+No automatic bank verification, provider booking/notification, accredited certification, blended-source lots or verified live wool-price feed is claimed. Real-user acceptance tests, credential rotation, backup/restore checks, support contacts and operational policies remain launch requirements.

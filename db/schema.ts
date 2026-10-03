@@ -1,4 +1,4 @@
-import { index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
@@ -7,6 +7,8 @@ export const users = sqliteTable("users", {
   picture: text("picture"),
   role: text("role", { enum: ["farmer", "buyer", "laboratory", "transporter", "warehouse", "processor", "brand"] }).notNull().default("farmer"),
   locale: text("locale").notNull().default("en"),
+  onboarded: integer("onboarded", { mode: "boolean" }).notNull().default(false),
+  organisation: text("organisation"),
   upiVpa: text("upi_vpa"),
   upiName: text("upi_name"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
@@ -33,6 +35,8 @@ export const woolBatches = sqliteTable("wool_batches", {
   micron: real("micron"),
   stapleMm: real("staple_mm"),
   status: text("status").notNull().default("registered"),
+  saleStatus: text("sale_status").notNull().default("unlisted"),
+  completedAt: integer("completed_at", { mode: "timestamp_ms" }),
   reservePrice: real("reserve_price").notNull().default(0),
   currentOwnerId: text("current_owner_id").notNull(),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
@@ -74,4 +78,30 @@ export const bookings = sqliteTable("bookings", {
   providerName: text("provider_name").notNull(),
   scheduledAt: integer("scheduled_at", { mode: "timestamp_ms" }).notNull(),
   status: text("status").notNull().default("requested"),
+});
+
+export const batchParticipants = sqliteTable("batch_participants", {
+  id: text("id").primaryKey(),
+  batchId: text("batch_id").notNull().references(() => woolBatches.id),
+  email: text("email").notNull(),
+  role: text("role").notNull(),
+  invitedBy: text("invited_by").notNull().references(() => users.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+}, (table) => [uniqueIndex("participant_batch_email").on(table.batchId, table.email)]);
+
+export const productLots = sqliteTable("product_lots", {
+  id: text("id").primaryKey(),
+  batchId: text("batch_id").notNull().references(() => woolBatches.id),
+  parentLotId: text("parent_lot_id"),
+  name: text("name").notNull(),
+  kind: text("kind").notNull(),
+  weightKg: real("weight_kg").notNull(),
+  createdBy: text("created_by").notNull().references(() => users.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+}, (table) => [index("lots_batch").on(table.batchId)]);
+
+export const rateWindows = sqliteTable("rate_windows", {
+  id: text("id").primaryKey(),
+  window: integer("window").notNull(),
+  hits: integer("hits").notNull(),
 });

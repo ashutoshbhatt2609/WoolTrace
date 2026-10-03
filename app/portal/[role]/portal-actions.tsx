@@ -1,150 +1,26 @@
 "use client";
-
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowRight, Camera, CheckCircle2, QrCode, ScanLine, X } from "lucide-react";
-import type { PortalRole } from "@/app/lib/portals";
-
-async function compressPhoto(file: File) {
-  const source = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("The photo could not be read."));
-    reader.readAsDataURL(file);
-  });
-  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const element = new window.Image();
-    element.onload = () => resolve(element);
-    element.onerror = () => reject(new Error("Choose a valid photo."));
-    element.src = source;
-  });
-  const scale = Math.min(1, 1280 / Math.max(image.width, image.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(image.width * scale));
-  canvas.height = Math.max(1, Math.round(image.height * scale));
-  canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
-  const compressed = canvas.toDataURL("image/jpeg", 0.72);
-  if (compressed.length > 500_000) throw new Error("The compressed photo is still too large. Choose a smaller image.");
-  return compressed;
-}
-
-export default function PortalActions({ role, actions }: { role: PortalRole; actions: readonly string[] }) {
-  const router = useRouter();
-  const [scanOpen, setScanOpen] = useState(false);
-  const [scanning, setScanning] = useState(false);
-  const [scanMessage, setScanMessage] = useState("");
-  const [selected, setSelected] = useState("");
-  const [message, setMessage] = useState("");
-  const [saving, setSaving] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-
-  function stopScanner() {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
-    setScanning(false);
-  }
-
-  useEffect(() => () => stopScanner(), []);
-
-  function openScannedValue(value: string) {
-    let id = value.trim();
-    try {
-      const url = new URL(id);
-      const match = url.pathname.match(/\/batch\/([^/]+)/);
-      if (match) id = decodeURIComponent(match[1]);
-    } catch { /* A printed batch ID is also valid input. */ }
-    if (!id) return;
-    stopScanner();
-    setScanOpen(false);
-    router.push(`/batch/${encodeURIComponent(id)}`);
-  }
-
-  async function startScanner() {
-    setScanMessage("");
-    const BarcodeReader = (window as unknown as { BarcodeDetector?: new (options: { formats: string[] }) => { detect: (source: HTMLVideoElement) => Promise<{ rawValue: string }[]> } }).BarcodeDetector;
-    if (!BarcodeReader || !navigator.mediaDevices?.getUserMedia) {
-      setScanMessage("Camera QR scanning is not supported in this browser. Enter the batch ID below.");
-      return;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
-      streamRef.current = stream;
-      setScanning(true);
-      const video = videoRef.current;
-      if (!video) return;
-      video.srcObject = stream;
-      await video.play();
-      const detector = new BarcodeReader({ formats: ["qr_code"] });
-      const scanFrame = async () => {
-        if (!streamRef.current || !videoRef.current) return;
-        try {
-          const codes = await detector.detect(videoRef.current);
-          if (codes[0]?.rawValue) { openScannedValue(codes[0].rawValue); return; }
-        } catch { /* Keep scanning while the camera warms up. */ }
-        window.requestAnimationFrame(() => void scanFrame());
-      };
-      void scanFrame();
-    } catch {
-      stopScanner();
-      setScanMessage("Camera access was unavailable. Allow camera permission or enter the batch ID below.");
-    }
-  }
-
-  function openPassport(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const id = String(new FormData(event.currentTarget).get("batchId") ?? "").trim();
-    if (id) openScannedValue(id);
-  }
-
-  async function saveEvent(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSaving(true);
-    setMessage("");
-    const data = new FormData(event.currentTarget);
-    const batchId = String(data.get("batchId") ?? "").trim();
-    if (role === "brand" && selected === "Open product QR") {
-      openScannedValue(batchId);
-      setSaving(false);
-      return;
-    }
-    try {
-      const isCompletion = role === "farmer" && selected === "Complete shearing with photo";
-      const photo = data.get("evidencePhoto");
-      const evidenceImageData = isCompletion && photo instanceof File && photo.size ? await compressPhoto(photo) : undefined;
-      const response = await fetch("/api/batches/events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          batchId,
-          portalRole: role,
-          title: selected,
-          location: data.get("location"),
-          notes: data.get("notes"),
-          evidenceImageData,
-          finalWeightKg: isCompletion ? data.get("finalWeightKg") : undefined,
-          shearedAt: isCompletion ? data.get("shearedAt") : undefined,
-        }),
-      });
-      const payload = await response.json() as { error?: string };
-      if (!response.ok) throw new Error(payload.error ?? "The update could not be saved.");
-      setMessage(isCompletion ? "Saved. The compressed shearing photo and final details are now part of the QR history." : "Saved to the batch passport. Anyone scanning its QR can now see this stage.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "The update could not be saved.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const isCompletion = role === "farmer" && selected === "Complete shearing with photo";
-  const opensProductQr = role === "brand" && selected === "Open product QR";
-
-  return <>
-    <div className="portal-actions-wrap">
-      <button className="portal-scan-button" onClick={() => setScanOpen(true)}><ScanLine /> Scan or enter batch QR</button>
-      <article className="portal-action-panel"><div className="panel-head"><div><p className="kicker">YOUR WORKFLOW</p><h3>Actions for this stage</h3></div></div>{actions.map((action, index) => <button onClick={() => { setSelected(action); setMessage(""); }} key={action}><span>{index + 1}</span><p><strong>{action}</strong><small>Record this update against a live batch</small></p><ArrowRight /></button>)}</article>
-    </div>
-    {scanOpen && <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="scan-title"><form className="portal-modal" onSubmit={openPassport}><button type="button" aria-label="Close QR scanner" className="modal-close" onClick={() => { stopScanner(); setScanOpen(false); }}><X /></button><QrCode /><p className="kicker">OPEN WOOL PASSPORT</p><h2 id="scan-title">Scan QR or enter its batch ID</h2><p>Use the rear camera or type the code printed below the label.</p><video className={`qr-camera ${scanning ? "active" : ""}`} ref={videoRef} muted playsInline aria-label="QR scanner camera preview" /><button className="camera-button" type="button" onClick={() => scanning ? stopScanner() : void startScanner()}><Camera /> {scanning ? "Stop camera" : "Scan with camera"}</button>{scanMessage && <p className="form-error">{scanMessage}</p>}<label>Batch ID<input name="batchId" defaultValue="WT-2610-KAR" required /></label><button className="lime-button" type="submit">Open passport <ArrowRight /></button></form></div>}
-    {selected && <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="event-title"><form className="portal-modal" onSubmit={saveEvent}><button type="button" aria-label="Close batch update" className="modal-close" onClick={() => setSelected("")}><X /></button><p className="kicker">{opensProductQr ? "PUBLIC WOOL QR" : "TIMELINE UPDATE"}</p><h2 id="event-title">{selected}</h2><p>{isCompletion ? "Add the actual completion date, final wool weight and a photo from shearing. The image is compressed before it is saved." : opensProductQr ? "Open the batch passport and use its downloadable QR on the finished product." : "This update becomes part of the public wool journey."}</p><label>Live batch ID<input name="batchId" required placeholder="WT-2610-ABCDE" /></label>{isCompletion ? <><div className="form-pair"><label>Completion date<input name="shearedAt" type="date" required /></label><label>Final wool weight (kg)<input name="finalWeightKg" type="number" min="0.1" step="0.1" required /></label></div><label>Shearing photo<input name="evidencePhoto" type="file" accept="image/*" capture="environment" required /></label><label>Farmer note<textarea name="notes" placeholder="Shearer, flock or condition notes" /></label></> : !opensProductQr && <><label>Location<input name="location" placeholder="Facility, village or district" /></label><label>Notes<textarea name="notes" placeholder="Weight, seal number, test reference or other details" /></label></>}{message && <p className={message.startsWith("Saved") ? "form-success" : "form-error"}>{message}</p>}<button className="lime-button" type="submit" disabled={saving}>{saving ? "Saving…" : opensProductQr ? "Open QR passport" : "Save to QR passport"} {saving ? null : <CheckCircle2 />}</button></form></div>}
-  </>;
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import AppShell from "@/app/components/app-shell";
+import { ActionForm, Field, requestJson, compressPhoto } from "@/app/components/forms";
+import type { GoogleUser } from "@/app/lib/google-auth";
+import { type PortalRole, portalDefinitions } from "@/app/lib/portals";
+const actions:Record<string,string[]>={farmer:["Complete shearing with photo"],buyer:["Wool received"],laboratory:["Sample received"],transporter:["Pickup recorded","Delivery recorded"],warehouse:["Storage intake","Storage released"],processor:["Scouring completed","Carding completed","Spinning completed","Weaving completed","Dyeing completed"],brand:["Finished product recorded"]};
+type Batch={id:string;breed:string;weight:number};type Lot={id:string;name:string;kind:string;weightKg:number;parentLotId:string|null};
+export default function PortalActions({role,actualRole,user}:{role:PortalRole;actualRole:string;user:GoogleUser}){
+ const [batches,setBatches]=useState<Batch[]>([]),[batchId,setBatchId]=useState(""),[lots,setLots]=useState<Lot[]>([]),[error,setError]=useState("");
+ useEffect(()=>{requestJson<{batches:Batch[]}>("/api/batches").then(d=>setBatches(d.batches)).catch(e=>setError(e.message));},[]);
+ async function loadLots(id:string){setBatchId(id);setLots([]);if(!id)return;try{setLots((await requestJson<{lots:Lot[]}>("/api/lots?batchId="+id)).lots);}catch(e){setError((e as Error).message);}}
+ const select=<label>Assigned batch<select name="batchId" required value={batchId} onChange={e=>loadLots(e.target.value)}><option value="">Select a batch</option>{batches.map(b=><option key={b.id} value={b.id}>{b.breed} · {b.id.slice(0,15)}… · {b.weight} kg</option>)}</select></label>;
+ return <AppShell user={user}><header className="wt-page-head"><div><p className="wt-eyebrow">YOUR STAGE IN THE JOURNEY</p><h1>{portalDefinitions[role].name}</h1><p>{portalDefinitions[role].description}</p></div><Link className="wt-outline" href="/workspace/my-wool">Manage batches →</Link></header>{error&&<p role="alert" className="wt-error">{error}</p>}
+ {actualRole!==role?<section className="wt-card"><h2>This is the {role} workspace.</h2><p>Your selected role is {actualRole}. Change your profile if this is the role you perform. Partner accounts still need the owner’s batch invitation.</p><Link className="wt-button" href="/profile">Update my profile</Link></section>:<div className="wt-two-columns"><section className="wt-card"><h2>{role==="farmer"?"Complete the shearing record":"Record a stage update"}</h2><p>{role==="farmer"?"Add the actual completion date, final wool weight and a photo.":"Choose a batch assigned to your Google email. Your update becomes public on its QR passport."}</p><ActionForm submit="Save to wool journey" onSubmit={async data=>{
+ const payload:Record<string,unknown>={...Object.fromEntries(data),portalRole:role};
+ if(role==="farmer"){const file=data.get("photo");if(!(file instanceof File))throw new Error("Choose a shearing photo.");payload.evidenceImageData=await compressPhoto(file);}delete payload.photo;
+ await requestJson("/api/batches/events",{method:"POST",body:JSON.stringify(payload)});
+ }}>{select}<label>Stage<select name="title">{actions[role].map(a=><option key={a}>{a}</option>)}</select></label><Field name="location" label="Farm, facility or handover location"/>
+ {role==="farmer"&&<><Field name="shearedAt" label="Shearing completion date" type="date" max={new Date().toISOString().slice(0,10)}/><Field name="finalWeightKg" label="Final wool weight (kg)" type="number" min=".01" max="100000" step=".01"/><label>Shearing photo<input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required/></label><p className="wt-help">Up to 15 MB. Compressed on your device before storage. The photo appears on the public passport.</p></>}
+ <label>Stage details (optional)<textarea name="notes" rows={4} maxLength={500} placeholder="Weights, conditions, processing details or a report reference. Do not include private contact details."/></label><label className="wt-check"><input type="checkbox" required/> These details are accurate to the best of my knowledge and may be shown publicly.</label></ActionForm></section>
+ <section className="wt-card wt-soft"><h2>Continue the work</h2>{role==="farmer"&&<><Link className="wt-quick-link" href="/workspace/my-wool">Register wool, list a batch or invite partners →</Link><Link className="wt-quick-link" href="/workspace/reverse-bidding">Compare offers and confirm payment →</Link></>}{role==="buyer"&&<Link className="wt-quick-link" href="/workspace/woolkart">Browse wool and place an offer →</Link>}{role==="laboratory"&&<Link className="wt-quick-link" href="/workspace/quality">Record fibre measurements →</Link>}
+ {["processor","brand"].includes(role)&&<><h3>Create a traceable output lot</h3><p>Allocate output weight from the source batch or an existing parent lot. The total cannot exceed the parent’s weight.</p><ActionForm submit="Create lot & QR passport" onSubmit={async data=>{await requestJson("/api/lots",{method:"POST",body:JSON.stringify({...Object.fromEntries(data),batchId})});await loadLots(batchId);}}><p>{batchId?"Selected batch: "+batchId:"Select a batch in the stage form first."}</p><label>Parent<select name="parentLotId"><option value="">Source wool batch</option>{lots.map(l=><option value={l.id} key={l.id}>{l.name} · {l.weightKg} kg</option>)}</select></label><Field name="name" label="Lot or product name"/><label>Output type<select name="kind">{["clean_wool","yarn","fabric","product"].map(k=><option key={k} value={k}>{k.replaceAll("_"," ")}</option>)}</select></label><Field name="weightKg" label="Output weight (kg)" type="number" min=".01" max="100000" step=".01"/></ActionForm>{lots.map(l=><Link className="wt-quick-link" key={l.id} href={"/lot/"+l.id}>{l.name} · {l.weightKg} kg · Open QR →</Link>)}</>}
+ {batchId&&<Link className="wt-quick-link" href={"/batch/"+batchId}>Open this batch’s public journey →</Link>}<p className="wt-help">These are participant-submitted records, not independent certification. Each update is linked to its account and previous event.</p></section></div>}</AppShell>;
 }

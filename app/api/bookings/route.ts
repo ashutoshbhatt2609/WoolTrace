@@ -1,33 +1,23 @@
-import { NextResponse } from "next/server";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { getGoogleUser } from "@/app/lib/google-auth";
-import { ensureUser } from "@/app/lib/ensure-user";
-import { bookings, woolBatches } from "@/db/schema";
-
-export const dynamic = "force-dynamic";
-
-const bookingInput = z.object({ batchId: z.string().optional(), kind: z.enum(["transport", "warehouse", "shearing", "veterinary", "quality", "processing"]), providerName: z.string().trim().min(2).max(120), scheduledAt: z.coerce.date() });
-
-export async function GET() {
-  const user = await getGoogleUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const db = await ensureUser(user);
-  const records = await db.select().from(bookings).where(eq(bookings.userId, user.sub)).orderBy(desc(bookings.scheduledAt));
-  return NextResponse.json({ bookings: records }, { headers: { "Cache-Control": "no-store" } });
-}
-
-export async function POST(request: Request) {
-  const user = await getGoogleUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const parsed = bookingInput.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Choose a service, provider and valid date." }, { status: 400 });
-  const db = await ensureUser(user);
-  if (parsed.data.batchId) {
-    const [batch] = await db.select({ id: woolBatches.id }).from(woolBatches).where(eq(woolBatches.id, parsed.data.batchId)).limit(1);
-    if (!batch) return NextResponse.json({ error: "The selected live batch was not found." }, { status: 404 });
-  }
-  const id = crypto.randomUUID();
-  await db.insert(bookings).values({ id, batchId: parsed.data.batchId || null, userId: user.sub, kind: parsed.data.kind, providerName: parsed.data.providerName, scheduledAt: parsed.data.scheduledAt, status: "requested" });
-  return NextResponse.json({ booking: { id, ...parsed.data, status: "requested" } }, { status: 201 });
-}
+import { api, ApiError, body, json } from "@/app/lib/api";
+import { getBatch, requireOwner } from "@/app/lib/batch-access";
+import { getDb } from "@/db";
+import { bookings } from "@/db/schema";
+export const GET=api(async(_request,user)=>json({bookings:await getDb().select().from(bookings).where(eq(bookings.userId,user.sub)).orderBy(desc(bookings.scheduledAt)).limit(200)}));
+export const POST=api(async(request,user)=>{
+ const data=await body(request,z.object({batchId:z.string().optional(),kind:z.enum(["transport","warehouse","shearing","veterinary","quality","processing"]),providerName:z.string().trim().min(2).max(120),scheduledAt:z.coerce.date()}));
+ if(data.scheduledAt.getTime()<Date.now()-86400000) throw new ApiError(400,"Choose today or a future date.");
+ const id=crypto.randomUUID();
+ await getDb().transaction(async tx=>{
+  if(data.batchId) requireOwner(await getBatch(tx,data.batchId),user.sub);
+  await tx.insert(bookings).values({...data,batchId:data.batchId||null,id,userId:user.sub,status:"planned"});
+ });
+ return json({booking:{id,...data,status:"planned"}},201);
+});
+export const DELETE=api(async(request,user)=>{
+ const data=await body(request,z.object({id:z.string().uuid()}));
+ const changed=await getDb().update(bookings).set({status:"cancelled"}).where(and(eq(bookings.id,data.id),eq(bookings.userId,user.sub))).returning();
+ if(!changed.length) throw new ApiError(404,"Service plan not found.");
+ return json({ok:true});
+});

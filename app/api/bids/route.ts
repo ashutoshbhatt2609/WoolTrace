@@ -1,56 +1,62 @@
-import { NextResponse } from "next/server";
-import { and, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, desc, eq, ne, or } from "drizzle-orm";
 import { z } from "zod";
-import { getGoogleUser } from "@/app/lib/google-auth";
-import { ensureUser } from "@/app/lib/ensure-user";
-import { hashBatchEvent } from "@/app/lib/event-integrity";
-import { batchEvents, bids, woolBatches } from "@/db/schema";
+import { api, ApiError, body, json } from "@/app/lib/api";
+import { appendEvent, getBatch, requireOwner } from "@/app/lib/batch-access";
+import { getDb } from "@/db";
+import { bids, woolBatches } from "@/db/schema";
 
-export const dynamic = "force-dynamic";
-
-const bidInput = z.object({ batchId: z.string().min(4), pricePerKg: z.coerce.number().positive(), pickupDays: z.coerce.number().int().min(0).max(60), paymentTerms: z.string().min(2).max(120) });
-
-export async function GET() {
-  const user = await getGoogleUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const db = await ensureUser(user);
-  const owned = await db.select({ id: woolBatches.id }).from(woolBatches).where(eq(woolBatches.farmerId, user.sub));
-  if (!owned.length) return NextResponse.json({ bids: [] });
-  const records = await db.select().from(bids).where(inArray(bids.batchId, owned.map((batch) => batch.id))).orderBy(desc(bids.createdAt));
-  return NextResponse.json({ bids: records }, { headers: { "Cache-Control": "no-store" } });
-}
-
-export async function POST(request: Request) {
-  const user = await getGoogleUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const parsed = bidInput.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Enter a valid batch, price, pickup time and payment term." }, { status: 400 });
-  const db = await ensureUser(user, "buyer");
-  const [batch] = await db.select().from(woolBatches).where(eq(woolBatches.id, parsed.data.batchId)).limit(1);
-  if (!batch) return NextResponse.json({ error: "That live batch was not found." }, { status: 404 });
-  if (batch.farmerId === user.sub && !(process.env.DEMO_MODE === "true" && user.sub === "demo-farmer")) return NextResponse.json({ error: "A farmer cannot bid on their own wool." }, { status: 403 });
-  const id = crypto.randomUUID();
-  await db.insert(bids).values({ id, batchId: batch.id, buyerId: user.sub, pricePerKg: parsed.data.pricePerKg, pickupDays: parsed.data.pickupDays, paymentTerms: parsed.data.paymentTerms, status: "active", createdAt: new Date() });
-  return NextResponse.json({ bid: { id, ...parsed.data, status: "active" } }, { status: 201 });
-}
-
-export async function PATCH(request: Request) {
-  const user = await getGoogleUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const input = z.object({ bidId: z.string().uuid(), action: z.literal("accept") }).safeParse(await request.json().catch(() => null));
-  if (!input.success) return NextResponse.json({ error: "Invalid bid action." }, { status: 400 });
-  const db = await ensureUser(user);
-  const [bid] = await db.select().from(bids).where(eq(bids.id, input.data.bidId)).limit(1);
-  if (!bid) return NextResponse.json({ error: "Bid not found." }, { status: 404 });
-  const [batch] = await db.select().from(woolBatches).where(and(eq(woolBatches.id, bid.batchId), eq(woolBatches.farmerId, user.sub))).limit(1);
-  if (!batch) return NextResponse.json({ error: "Only the batch owner can accept this offer." }, { status: 403 });
-  await db.update(bids).set({ status: "accepted" }).where(eq(bids.id, bid.id));
-  await db.update(bids).set({ status: "not_selected" }).where(and(eq(bids.batchId, batch.id), ne(bids.id, bid.id)));
-  await db.update(woolBatches).set({ status: "sold", currentOwnerId: bid.buyerId }).where(eq(woolBatches.id, batch.id));
-  const now = new Date();
-  const notes = `Accepted ₹${bid.pricePerKg}/kg; pickup in ${bid.pickupDays} days; ${bid.paymentTerms}. New owner reference: ${bid.buyerId}.`;
-  const [lastEvent] = await db.select({ eventHash: batchEvents.eventHash }).from(batchEvents).where(eq(batchEvents.batchId, batch.id)).orderBy(desc(batchEvents.occurredAt)).limit(1);
-  const eventHash = await hashBatchEvent({ batchId: batch.id, eventType: "offer_accepted", title: "Farmer accepted the winning buyer offer", actorId: user.sub, actorRole: "farmer", notes, occurredAt: now, previousHash: lastEvent?.eventHash ?? null });
-  await db.insert(batchEvents).values({ id: crypto.randomUUID(), batchId: batch.id, eventType: "offer_accepted", title: "Farmer accepted the winning buyer offer", actorId: user.sub, actorRole: "farmer", notes, previousHash: lastEvent?.eventHash ?? null, eventHash, verified: true, occurredAt: now });
-  return NextResponse.json({ ok: true });
-}
+export const GET=api(async(_request,user)=>{
+ const records=await getDb().select({id:bids.id,batchId:bids.batchId,buyerId:bids.buyerId,pricePerKg:bids.pricePerKg,pickupDays:bids.pickupDays,paymentTerms:bids.paymentTerms,status:bids.status,createdAt:bids.createdAt,sellerId:woolBatches.farmerId,weightKg:woolBatches.weightKg}).from(bids).innerJoin(woolBatches,eq(bids.batchId,woolBatches.id)).where(or(eq(woolBatches.farmerId,user.sub),eq(bids.buyerId,user.sub))).orderBy(desc(bids.createdAt)).limit(200);
+ return json({bids:records.map(b=>({...b,isSeller:b.sellerId===user.sub}))});
+});
+export const POST=api(async(request,user,member)=>{
+ if(member.role!=="buyer") throw new ApiError(403,"Select the buyer role in your profile to make offers.");
+ const data=await body(request,z.object({batchId:z.string().min(4),pricePerKg:z.coerce.number().positive().max(1000000),pickupDays:z.coerce.number().int().min(0).max(60),paymentTerms:z.string().trim().min(2).max(120)}));
+ const id=crypto.randomUUID();
+ await getDb().transaction(async tx=>{
+  const batch=await getBatch(tx,data.batchId);
+  if(batch.farmerId===user.sub) throw new ApiError(403,"You cannot bid on your own wool.");
+  if(batch.saleStatus!=="listed") throw new ApiError(409,"This batch is not open for offers.");
+  if(data.pricePerKg<batch.reservePrice) throw new ApiError(400,"Your offer must meet the reserve price.");
+  const [existing]=await tx.select().from(bids).where(and(eq(bids.batchId,batch.id),eq(bids.buyerId,user.sub),eq(bids.status,"active"))).limit(1);
+  if(existing) throw new ApiError(409,"You already have an active offer. Withdraw it before making another.");
+  await tx.insert(bids).values({id,...data,buyerId:user.sub,status:"active",createdAt:new Date()});
+ });
+ return json({bid:{id,...data,status:"active"}},201);
+});
+export const PATCH=api(async(request,user)=>{
+ const data=await body(request,z.object({bidId:z.string().uuid(),action:z.enum(["accept","withdraw","confirm_payment","cancel_sale"]),reference:z.string().trim().min(6).max(80).optional()}));
+ await getDb().transaction(async tx=>{
+  const [bid]=await tx.select().from(bids).where(eq(bids.id,data.bidId)).limit(1);
+  if(!bid) throw new ApiError(404,"Offer not found.");
+  const batch=await getBatch(tx,bid.batchId);
+  if(data.action==="withdraw"){
+   if(bid.buyerId!==user.sub) throw new ApiError(403,"Only the buyer can withdraw this offer.");
+   if(bid.status!=="active") throw new ApiError(409,"Only an active offer can be withdrawn.");
+   await tx.update(bids).set({status:"withdrawn"}).where(eq(bids.id,bid.id)); return;
+  }
+  requireOwner(batch,user.sub);
+  if(batch.farmerId!==user.sub) throw new ApiError(403,"Only the source seller can confirm this sale.");
+  if(data.action==="cancel_sale"){
+   if(bid.status!=="accepted" || batch.saleStatus!=="accepted") throw new ApiError(409,"Only an unpaid accepted sale can be cancelled.");
+   await tx.update(bids).set({status:"cancelled"}).where(eq(bids.id,bid.id));
+   await tx.update(woolBatches).set({saleStatus:"unlisted"}).where(eq(woolBatches.id,batch.id));
+   await appendEvent(tx,{batchId:batch.id,eventType:"sale_cancelled",title:"Seller cancelled the unpaid sale",actorId:user.sub,actorRole:"farmer",notes:"Ownership remains with the farmer. The batch is not currently listed."});
+   return;
+  }
+  if(data.action==="accept"){
+   if(bid.status!=="active" || batch.saleStatus!=="listed") throw new ApiError(409,"This offer is no longer available.");
+   await tx.update(bids).set({status:"accepted"}).where(eq(bids.id,bid.id));
+   await tx.update(bids).set({status:"not_selected"}).where(and(eq(bids.batchId,batch.id),ne(bids.id,bid.id),eq(bids.status,"active")));
+   await tx.update(woolBatches).set({saleStatus:"accepted"}).where(eq(woolBatches.id,batch.id));
+   await appendEvent(tx,{batchId:batch.id,eventType:"offer_accepted",title:"Seller accepted a buyer offer",actorId:user.sub,actorRole:"farmer",notes:"Payment and handover are pending. Price ₹"+bid.pricePerKg+"/kg."});
+  }else{
+   if(!data.reference) throw new ApiError(400,"Enter the transaction reference after checking your bank account.");
+   if(bid.status!=="accepted" || batch.saleStatus!=="accepted") throw new ApiError(409,"Only an accepted, unpaid offer can be confirmed.");
+   await tx.update(bids).set({status:"paid"}).where(eq(bids.id,bid.id));
+   await tx.update(woolBatches).set({saleStatus:"paid",currentOwnerId:bid.buyerId}).where(eq(woolBatches.id,batch.id));
+   await appendEvent(tx,{batchId:batch.id,eventType:"payment_confirmed",title:"Seller confirmed payment and transferred ownership",actorId:user.sub,actorRole:"farmer",notes:"Payment confirmed manually by seller, not by a bank integration. Reference ending "+data.reference.slice(-4)+"."});
+  }
+ });
+ return json({ok:true});
+});

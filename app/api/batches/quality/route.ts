@@ -1,31 +1,17 @@
-import { NextResponse } from "next/server";
-import { desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { getGoogleUser } from "@/app/lib/google-auth";
-import { ensureUser } from "@/app/lib/ensure-user";
-import { hashBatchEvent } from "@/app/lib/event-integrity";
-import { batchEvents, users, woolBatches } from "@/db/schema";
-
-export const dynamic = "force-dynamic";
-
-const qualityInput = z.object({ batchId: z.string().min(4), grade: z.string().trim().min(1).max(12), micron: z.coerce.number().positive().max(100), stapleMm: z.coerce.number().positive().max(500), location: z.string().trim().min(2).max(140) });
-
-export async function POST(request: Request) {
-  const user = await getGoogleUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const parsed = qualityInput.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Enter a valid batch, grade, micron and staple length." }, { status: 400 });
-  const db = await ensureUser(user);
-  const [member] = await db.select({ role: users.role }).from(users).where(eq(users.id, user.sub)).limit(1);
-  const demoAccess = process.env.DEMO_MODE === "true" && user.sub === "demo-farmer";
-  if (!demoAccess && member?.role !== "laboratory") return NextResponse.json({ error: "Only a laboratory account can add quality measurements." }, { status: 403 });
-  const [batch] = await db.select().from(woolBatches).where(eq(woolBatches.id, parsed.data.batchId)).limit(1);
-  if (!batch) return NextResponse.json({ error: "That live batch was not found." }, { status: 404 });
-  await db.update(woolBatches).set({ grade: parsed.data.grade, micron: parsed.data.micron, stapleMm: parsed.data.stapleMm, status: "quality_recorded" }).where(eq(woolBatches.id, batch.id));
-  const now = new Date();
-  const notes = `Grade ${parsed.data.grade}; ${parsed.data.micron} micron; ${parsed.data.stapleMm} mm staple.`;
-  const [lastEvent] = await db.select({ eventHash: batchEvents.eventHash }).from(batchEvents).where(eq(batchEvents.batchId, batch.id)).orderBy(desc(batchEvents.occurredAt)).limit(1);
-  const eventHash = await hashBatchEvent({ batchId: batch.id, eventType: "quality_recorded", title: "Laboratory quality result recorded", location: parsed.data.location, actorId: user.sub, actorRole: "laboratory", notes, occurredAt: now, previousHash: lastEvent?.eventHash ?? null });
-  await db.insert(batchEvents).values({ id: crypto.randomUUID(), batchId: batch.id, eventType: "quality_recorded", title: "Laboratory quality result recorded", location: parsed.data.location, actorId: user.sub, actorRole: "laboratory", notes, previousHash: lastEvent?.eventHash ?? null, eventHash, verified: true, occurredAt: now });
-  return NextResponse.json({ ok: true });
-}
+import { api, ApiError, body, json } from "@/app/lib/api";
+import { appendEvent, getBatch, requireParticipant } from "@/app/lib/batch-access";
+import { getDb } from "@/db";
+import { woolBatches } from "@/db/schema";
+export const POST=api(async(request,user,member)=>{
+ if(member.role!=="laboratory") throw new ApiError(403,"Only an invited laboratory account can record measurements.");
+ const data=await body(request,z.object({batchId:z.string().min(4),grade:z.string().trim().min(1).max(30),micron:z.coerce.number().positive().max(100),stapleMm:z.coerce.number().positive().max(500),location:z.string().trim().min(2).max(140)}));
+ await getDb().transaction(async tx=>{
+  const batch=await getBatch(tx,data.batchId); await requireParticipant(tx,batch,user,"laboratory");
+  if(!batch.completedAt) throw new ApiError(409,"Complete shearing before recording measurements.");
+  await tx.update(woolBatches).set({grade:data.grade,micron:data.micron,stapleMm:data.stapleMm}).where(eq(woolBatches.id,batch.id));
+  await appendEvent(tx,{batchId:batch.id,eventType:"quality_recorded",title:"Laboratory measurements recorded",actorId:user.sub,actorRole:"laboratory",location:data.location,notes:"Grade "+data.grade+"; "+data.micron+" micron; "+data.stapleMm+" mm staple. Submitted by the invited laboratory; not independently certified by WoolTrace."});
+ });
+ return json({ok:true},201);
+});
