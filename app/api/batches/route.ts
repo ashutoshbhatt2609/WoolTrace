@@ -67,7 +67,6 @@ export async function POST(request: Request) {
     district: parsed.data.district,
     state: parsed.data.state,
     flockSize: 0,
-    verified: false,
   });
 
   await db.insert(woolBatches).values({
@@ -78,19 +77,19 @@ export async function POST(request: Request) {
     shearedAt: parsed.data.date,
     weightKg: parsed.data.weight,
     grade: "Pending",
-    status: "registered",
+    status: "shearing_started",
     reservePrice: parsed.data.reserve,
     currentOwnerId: user.sub,
     createdAt: now,
   });
 
-  const eventNotes = `Source declared by farmer. Shearer: ${parsed.data.shearer}. Raw weight: ${parsed.data.weight} kg.`;
-  const eventHash = await hashBatchEvent({ batchId, eventType: "registered", title: "Wool sheared and source batch registered", location: `${parsed.data.farmName}, ${parsed.data.village}, ${parsed.data.district}, ${parsed.data.state}`, actorId: user.sub, actorRole: "farmer", notes: eventNotes, occurredAt: now });
+  const eventNotes = `Source recorded by the farmer. Shearer or team: ${parsed.data.shearer}. Expected wool weight: ${parsed.data.weight} kg.`;
+  const eventHash = await hashBatchEvent({ batchId, eventType: "shearing_started", title: "Shearing started and source batch registered", location: `${parsed.data.farmName}, ${parsed.data.village}, ${parsed.data.district}, ${parsed.data.state}`, actorId: user.sub, actorRole: "farmer", notes: eventNotes, occurredAt: now });
   await db.insert(batchEvents).values({
     id: crypto.randomUUID(),
     batchId,
-    eventType: "registered",
-    title: "Wool sheared and source batch registered",
+    eventType: "shearing_started",
+    title: "Shearing started and source batch registered",
     location: `${parsed.data.farmName}, ${parsed.data.village}, ${parsed.data.district}, ${parsed.data.state}`,
     actorId: user.sub,
     actorRole: "farmer",
@@ -106,7 +105,7 @@ export async function POST(request: Request) {
       breed: parsed.data.breed,
       weight: parsed.data.weight,
       grade: "Pending",
-      status: "Registered",
+      status: "Shearing started",
       bids: 0,
       price: parsed.data.reserve,
       source: "live",

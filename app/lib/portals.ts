@@ -1,6 +1,6 @@
 import {
   Factory, FlaskConical, HandCoins, Landmark, PackageCheck,
-  Scissors, ShieldCheck, ShoppingBag, Store, Truck, Warehouse,
+  Scissors, ShoppingBag, Store, Truck, Warehouse,
 } from "lucide-react";
 
 export const woolStages = [
@@ -19,21 +19,21 @@ export const woolStages = [
 export const portalDefinitions = {
   farmer: {
     name: "Farmer portal", short: "Farmer", icon: Scissors,
-    description: "Register wool at shearing, own the source record and decide which buyer wins.",
-    actions: ["Register a shearing batch", "Upload farm and flock proof", "Set reserve price", "Accept a reverse bid"],
+    description: "Declare the farm source, complete shearing with a photo and decide which buyer wins.",
+    actions: ["Complete shearing with photo", "Update farm or flock details", "Set reserve price", "Accept a reverse bid"],
     owns: ["Farm origin", "Shearing", "Sale acceptance"],
   },
   buyer: {
     name: "Buyer portal", short: "Buyer", icon: HandCoins,
-    description: "Search verified wool, compare laboratory quality and place transparent offers.",
+    description: "Search traceable wool, compare recorded quality and place transparent offers.",
     actions: ["Find graded wool", "Place or revise a bid", "Confirm payment terms", "Accept delivery"],
     owns: ["Bid", "Purchase", "Delivery acceptance"],
   },
   laboratory: {
     name: "Laboratory portal", short: "Laboratory", icon: FlaskConical,
-    description: "Record independently tested fibre measurements and sign quality certificates.",
-    actions: ["Receive a sample", "Enter test measurements", "Upload certificate", "Approve assigned grade"],
-    owns: ["Micron result", "Staple result", "Quality certificate"],
+    description: "Record independently tested fibre measurements when a farmer chooses a laboratory.",
+    actions: ["Receive a sample", "Enter test measurements", "Attach a result reference", "Record assigned grade"],
+    owns: ["Micron result", "Staple result", "Quality result"],
   },
   transporter: {
     name: "Transport portal", short: "Transporter", icon: Truck,
@@ -56,14 +56,8 @@ export const portalDefinitions = {
   brand: {
     name: "Brand & retail portal", short: "Brand / retail", icon: Store,
     description: "Attach source wool to finished products and publish customer-facing proof.",
-    actions: ["Receive fabric lot", "Register finished product", "Generate product QR", "Publish provenance story"],
+    actions: ["Receive fabric lot", "Register finished product", "Open product QR", "Publish provenance story"],
     owns: ["Manufacturing", "Product identity", "Retail verification"],
-  },
-  admin: {
-    name: "Admin portal", short: "Admin", icon: ShieldCheck,
-    description: "Verify organizations, investigate exceptions and audit the full chain of custody.",
-    actions: ["Verify farm source", "Review disputed events", "Suspend suspicious records", "Export audit trail"],
-    owns: ["Verification", "Compliance", "Audit"],
   },
 } as const;
 

@@ -16,11 +16,11 @@ export async function GET() {
   const market = marketResult.status === "fulfilled" ? marketResult.value : [];
   setStatus(integrations, "weather", weather ? "live" : "unavailable", weather ? "Open-Meteo responded successfully" : "Provider temporarily unavailable");
   if (process.env.DATA_GOV_IN_API_KEY && process.env.AGMARKNET_RESOURCE_ID) setStatus(integrations, "market", market.length ? "live" : "unavailable", market.length ? `${market.length} government market records received` : "The configured feed returned no usable records");
-  return NextResponse.json({ updatedAt: new Date().toISOString(), location: process.env.FARM_LOCATION_NAME ?? "Gulmarg, Jammu & Kashmir", weather, market, integrations, liveCount: integrations.filter((item) => item.status === "live" || item.status === "configured").length, totalCount: integrations.length }, { headers: { "Cache-Control": "no-store, max-age=0" } });
+  return NextResponse.json({ updatedAt: new Date().toISOString(), location: process.env.FARM_LOCATION_NAME ?? "Chitradurga, Karnataka", weather, market, integrations, liveCount: integrations.filter((item) => item.status === "live" || item.status === "configured").length, totalCount: integrations.length }, { headers: { "Cache-Control": "no-store, max-age=0" } });
 }
 
 async function loadWeather() {
-  const query = new URLSearchParams({ latitude: process.env.FARM_LATITUDE ?? "34.0484", longitude: process.env.FARM_LONGITUDE ?? "74.3805", current: "temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m", timezone: "Asia/Kolkata" });
+  const query = new URLSearchParams({ latitude: process.env.FARM_LATITUDE ?? "14.2251", longitude: process.env.FARM_LONGITUDE ?? "76.3980", current: "temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m", timezone: "Asia/Kolkata" });
   const response = await fetch(`https://api.open-meteo.com/v1/forecast?${query}`, { cache: "no-store", headers: { Accept: "application/json" } });
   if (!response.ok) throw new Error(`Weather service returned ${response.status}`);
   const payload = await response.json() as { current?: { temperature_2m?: number; relative_humidity_2m?: number; wind_speed_10m?: number; precipitation?: number; weather_code?: number; time?: string } };

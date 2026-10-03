@@ -1,13 +1,14 @@
-import { env } from "cloudflare:workers";
-import { drizzle } from "drizzle-orm/d1";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "./schema";
 
-export function getDb() {
-  if (!env.DB) {
-    throw new Error(
-      "Cloudflare D1 binding `DB` is unavailable. Set the `d1` field in .openai/hosting.json to `DB` or let your control plane inject the real binding values before using the database."
-    );
-  }
+let database: ReturnType<typeof drizzle<typeof schema>> | null = null;
 
-  return drizzle(env.DB, { schema });
+export function getDb() {
+  if (database) return database;
+  const url = process.env.TURSO_DATABASE_URL;
+  if (!url) throw new Error("TURSO_DATABASE_URL is missing. Connect a Turso database in Vercel before using WoolTrace records.");
+  const client = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
+  database = drizzle(client, { schema });
+  return database;
 }

@@ -16,7 +16,8 @@ export type IntegrationDefinition = {
 const configured = (...keys: string[]) => keys.every((key) => Boolean(process.env[key]?.trim()));
 
 export function appBaseUrl() {
-  return (process.env.APP_BASE_URL ?? "https://wooltrace-farm-to-fabric.witty-clock-9839.chatgpt.site").replace(/\/$/, "");
+  const vercelHost = process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL;
+  return (process.env.APP_BASE_URL ?? (vercelHost ? `https://${vercelHost}` : "http://localhost:3000")).replace(/\/$/, "");
 }
 
 export function integrationDefinitions(): IntegrationDefinition[] {
@@ -25,10 +26,10 @@ export function integrationDefinitions(): IntegrationDefinition[] {
       id: "database",
       label: "Traceability database",
       purpose: "Users, farms, batches, bids, bookings and every wool lifecycle event",
-      variables: ["DB (D1 binding)"],
-      provider: "Cloudflare D1",
-      state: "live",
-      detail: "Platform binding connected",
+      variables: ["TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN"],
+      provider: "Turso",
+      state: configured("TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN") ? "configured" : "setup_required",
+      detail: configured("TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN") ? "Serverless database connected" : "Connect a Turso database from Vercel Marketplace",
     },
     {
       id: "auth",
@@ -59,15 +60,6 @@ export function integrationDefinitions(): IntegrationDefinition[] {
       detail: configured("DATA_GOV_IN_API_KEY", "AGMARKNET_RESOURCE_ID") ? "Credentials present; feed checked on request" : "API key and selected resource ID required",
     },
     {
-      id: "maps",
-      label: "Maps and geocoding",
-      purpose: "Farm, warehouse and transport locations",
-      variables: ["GOOGLE_MAPS_API_KEY"],
-      provider: "Google Maps Platform",
-      state: configured("GOOGLE_MAPS_API_KEY") ? "configured" : "setup_required",
-      detail: configured("GOOGLE_MAPS_API_KEY") ? "Restricted key present" : "Restricted server-side API key required",
-    },
-    {
       id: "payments",
       label: "BHIM / UPI payments",
       purpose: "Seller-owned payment QR for every accepted wool offer",
@@ -76,26 +68,6 @@ export function integrationDefinitions(): IntegrationDefinition[] {
       state: "live",
       detail: "No gateway account, API key or platform fee required",
       note: "The seller verifies the credit in their own bank or UPI app before releasing wool.",
-    },
-    {
-      id: "logistics",
-      label: "Logistics tracking",
-      purpose: "Pickup booking, live shipment status and proof of delivery",
-      variables: ["LOGISTICS_API_URL", "LOGISTICS_API_KEY", "LOGISTICS_WEBHOOK_SECRET"],
-      provider: "Your selected logistics provider",
-      state: configured("LOGISTICS_API_URL", "LOGISTICS_API_KEY", "LOGISTICS_WEBHOOK_SECRET") ? "configured" : "setup_required",
-      detail: configured("LOGISTICS_API_URL", "LOGISTICS_API_KEY", "LOGISTICS_WEBHOOK_SECRET") ? "Provider endpoint present" : "Provider and API contract still need to be selected",
-      note: `Planned webhook: ${appBaseUrl()}/api/webhooks/logistics`,
-    },
-    {
-      id: "lab",
-      label: "Laboratory results",
-      purpose: "Verified micron, staple length, yield and certificate results",
-      variables: ["LAB_API_URL", "LAB_API_KEY", "LAB_WEBHOOK_SECRET"],
-      provider: "Your selected wool testing laboratory",
-      state: configured("LAB_API_URL", "LAB_API_KEY", "LAB_WEBHOOK_SECRET") ? "configured" : "setup_required",
-      detail: configured("LAB_API_URL", "LAB_API_KEY", "LAB_WEBHOOK_SECRET") ? "Laboratory endpoint present" : "Laboratory and result schema still need to be selected",
-      note: `Planned webhook: ${appBaseUrl()}/api/webhooks/lab`,
     },
   ];
 }

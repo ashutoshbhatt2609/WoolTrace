@@ -1,11 +1,11 @@
-import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
   name: text("name").notNull(),
   picture: text("picture"),
-  role: text("role", { enum: ["farmer", "buyer", "laboratory", "transporter", "warehouse", "processor", "brand", "partner", "admin"] }).notNull().default("farmer"),
+  role: text("role", { enum: ["farmer", "buyer", "laboratory", "transporter", "warehouse", "processor", "brand"] }).notNull().default("farmer"),
   locale: text("locale").notNull().default("en"),
   upiVpa: text("upi_vpa"),
   upiName: text("upi_name"),
@@ -20,7 +20,6 @@ export const farms = sqliteTable("farms", {
   district: text("district").notNull(),
   state: text("state").notNull(),
   flockSize: integer("flock_size").notNull().default(0),
-  verified: integer("verified", { mode: "boolean" }).notNull().default(false),
 });
 
 export const woolBatches = sqliteTable("wool_batches", {
@@ -51,20 +50,10 @@ export const batchEvents = sqliteTable("batch_events", {
   previousHash: text("previous_hash"),
   eventHash: text("event_hash"),
   verified: integer("verified", { mode: "boolean" }).notNull().default(false),
+  evidenceImageData: text("evidence_image_data"),
+  evidenceImageHash: text("evidence_image_hash"),
   occurredAt: integer("occurred_at", { mode: "timestamp_ms" }).notNull(),
 }, (table) => [index("idx_batch_events_batch_occurred").on(table.batchId, table.occurredAt)]);
-
-export const batchCertificates = sqliteTable("batch_certificates", {
-  id: text("id").primaryKey(),
-  batchId: text("batch_id").notNull().references(() => woolBatches.id),
-  serial: text("serial").notNull(),
-  productName: text("product_name").notNull(),
-  productRef: text("product_ref").notNull(),
-  issuedBy: text("issued_by").notNull().references(() => users.id),
-  issuedAt: integer("issued_at", { mode: "timestamp_ms" }).notNull(),
-  snapshotHash: text("snapshot_hash").notNull(),
-  status: text("status").notNull().default("active"),
-}, (table) => [uniqueIndex("idx_batch_certificates_batch").on(table.batchId), uniqueIndex("idx_batch_certificates_serial").on(table.serial)]);
 
 export const bids = sqliteTable("bids", {
   id: text("id").primaryKey(),
@@ -75,17 +64,6 @@ export const bids = sqliteTable("bids", {
   paymentTerms: text("payment_terms").notNull(),
   status: text("status").notNull().default("active"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-});
-
-export const serviceListings = sqliteTable("service_listings", {
-  id: text("id").primaryKey(),
-  providerId: text("provider_id").notNull().references(() => users.id),
-  type: text("type").notNull(),
-  name: text("name").notNull(),
-  district: text("district").notNull(),
-  priceLabel: text("price_label").notNull(),
-  rating: real("rating").notNull().default(0),
-  verified: integer("verified", { mode: "boolean" }).notNull().default(false),
 });
 
 export const bookings = sqliteTable("bookings", {

@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1790408474721,
-      "tag": "0000_slimy_pet_avengers",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1790686460460,
-      "tag": "0001_awesome_felicia_hardy",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1790847775026,
-      "tag": "0002_free_mantis",
+      "when": 1791015371224,
+      "tag": "0000_tranquil_jean_grey",
       "breakpoints": true
     }
   ]

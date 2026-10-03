@@ -5,6 +5,29 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Camera, CheckCircle2, QrCode, ScanLine, X } from "lucide-react";
 import type { PortalRole } from "@/app/lib/portals";
 
+async function compressPhoto(file: File) {
+  const source = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("The photo could not be read."));
+    reader.readAsDataURL(file);
+  });
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const element = new window.Image();
+    element.onload = () => resolve(element);
+    element.onerror = () => reject(new Error("Choose a valid photo."));
+    element.src = source;
+  });
+  const scale = Math.min(1, 1280 / Math.max(image.width, image.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+  canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const compressed = canvas.toDataURL("image/jpeg", 0.72);
+  if (compressed.length > 500_000) throw new Error("The compressed photo is still too large. Choose a smaller image.");
+  return compressed;
+}
+
 export default function PortalActions({ role, actions }: { role: PortalRole; actions: readonly string[] }) {
   const router = useRouter();
   const [scanOpen, setScanOpen] = useState(false);
@@ -58,7 +81,7 @@ export default function PortalActions({ role, actions }: { role: PortalRole; act
         try {
           const codes = await detector.detect(videoRef.current);
           if (codes[0]?.rawValue) { openScannedValue(codes[0].rawValue); return; }
-        } catch { /* Keep scanning while the camera is warming up. */ }
+        } catch { /* Keep scanning while the camera warms up. */ }
         window.requestAnimationFrame(() => void scanFrame());
       };
       void scanFrame();
@@ -70,8 +93,7 @@ export default function PortalActions({ role, actions }: { role: PortalRole; act
 
   function openPassport(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const id = String(data.get("batchId") ?? "").trim();
+    const id = String(new FormData(event.currentTarget).get("batchId") ?? "").trim();
     if (id) openScannedValue(id);
   }
 
@@ -80,29 +102,49 @@ export default function PortalActions({ role, actions }: { role: PortalRole; act
     setSaving(true);
     setMessage("");
     const data = new FormData(event.currentTarget);
+    const batchId = String(data.get("batchId") ?? "").trim();
+    if (role === "brand" && selected === "Open product QR") {
+      openScannedValue(batchId);
+      setSaving(false);
+      return;
+    }
     try {
-      const isCertificate = role === "brand" && selected === "Generate product QR";
-      const isFarmVerification = role === "admin" && selected === "Verify farm source";
-      const endpoint = isCertificate ? "/api/batches/certify" : isFarmVerification ? "/api/farms/verify" : "/api/batches/events";
-      const body = isCertificate
-        ? { batchId: data.get("batchId"), productName: data.get("productName"), productRef: data.get("productRef") }
-        : isFarmVerification
-          ? { batchId: data.get("batchId"), notes: data.get("notes") }
-          : { batchId: data.get("batchId"), portalRole: role, title: selected, location: data.get("location"), notes: data.get("notes") };
-      const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      const payload = await response.json() as { error?: string; passportUrl?: string };
+      const isCompletion = role === "farmer" && selected === "Complete shearing with photo";
+      const photo = data.get("evidencePhoto");
+      const evidenceImageData = isCompletion && photo instanceof File && photo.size ? await compressPhoto(photo) : undefined;
+      const response = await fetch("/api/batches/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          batchId,
+          portalRole: role,
+          title: selected,
+          location: data.get("location"),
+          notes: data.get("notes"),
+          evidenceImageData,
+          finalWeightKg: isCompletion ? data.get("finalWeightKg") : undefined,
+          shearedAt: isCompletion ? data.get("shearedAt") : undefined,
+        }),
+      });
+      const payload = await response.json() as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? "The update could not be saved.");
-      setMessage(isCertificate ? "Certified. The final QR now opens the complete wool lifetime record." : isFarmVerification ? "Verified. The farm identity and shearing source are now signed in the batch history." : "Saved to the batch passport. Anyone scanning its QR can now see this stage.");
-      if (isCertificate && payload.passportUrl) window.setTimeout(() => router.push(payload.passportUrl!), 900);
-    } catch (error) { setMessage(error instanceof Error ? error.message : "The update could not be saved."); }
-    finally { setSaving(false); }
+      setMessage(isCompletion ? "Saved. The compressed shearing photo and final details are now part of the QR history." : "Saved to the batch passport. Anyone scanning its QR can now see this stage.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The update could not be saved.");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  return <><div className="portal-actions-wrap">
-    <button className="portal-scan-button" onClick={() => setScanOpen(true)}><ScanLine /> Scan or enter batch QR</button>
-    <article className="portal-action-panel"><div className="panel-head"><div><p className="kicker">YOUR WORKFLOW</p><h3>Actions for this stage</h3></div></div>{actions.map((action, index) => <button onClick={() => { setSelected(action); setMessage(""); }} key={action}><span>{index + 1}</span><p><strong>{action}</strong><small>Record this update against a live batch</small></p><ArrowRight /></button>)}</article>
+  const isCompletion = role === "farmer" && selected === "Complete shearing with photo";
+  const opensProductQr = role === "brand" && selected === "Open product QR";
+
+  return <>
+    <div className="portal-actions-wrap">
+      <button className="portal-scan-button" onClick={() => setScanOpen(true)}><ScanLine /> Scan or enter batch QR</button>
+      <article className="portal-action-panel"><div className="panel-head"><div><p className="kicker">YOUR WORKFLOW</p><h3>Actions for this stage</h3></div></div>{actions.map((action, index) => <button onClick={() => { setSelected(action); setMessage(""); }} key={action}><span>{index + 1}</span><p><strong>{action}</strong><small>Record this update against a live batch</small></p><ArrowRight /></button>)}</article>
     </div>
-    {scanOpen && <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="scan-title"><form className="portal-modal" onSubmit={openPassport}><button type="button" aria-label="Close QR scanner" className="modal-close" onClick={() => { stopScanner(); setScanOpen(false); }}><X /></button><QrCode /><p className="kicker">OPEN WOOL PASSPORT</p><h2 id="scan-title">Scan QR or enter its batch ID</h2><p>Use the rear camera or type the code printed below the label.</p><video className={`qr-camera ${scanning ? "active" : ""}`} ref={videoRef} muted playsInline aria-label="QR scanner camera preview" /><button className="camera-button" type="button" onClick={() => scanning ? stopScanner() : void startScanner()}><Camera /> {scanning ? "Stop camera" : "Scan with camera"}</button>{scanMessage && <p className="form-error">{scanMessage}</p>}<label>Batch ID<input name="batchId" defaultValue="WT-2408-KAS" required /></label><button className="lime-button" type="submit">Open passport <ArrowRight /></button></form></div>}
-    {selected && <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="event-title"><form className="portal-modal" onSubmit={saveEvent}><button type="button" aria-label="Close batch update" className="modal-close" onClick={() => setSelected("")}><X /></button><p className="kicker">{role === "brand" && selected === "Generate product QR" ? "FINAL TRACEABILITY CERTIFICATE" : "SIGNED PORTAL UPDATE"}</p><h2 id="event-title">{selected}</h2><p>{role === "brand" && selected === "Generate product QR" ? "A certificate is issued only when the verified source, quality, sale, custody, processing and finished-product stages are complete." : role === "admin" && selected === "Verify farm source" ? "Confirm the farm identity and physical source before signing this origin record." : "This update will become part of the batch’s public chain of custody."}</p><label>Live batch ID<input name="batchId" required placeholder="WT-2609-ABCDE" /></label>{role === "brand" && selected === "Generate product QR" ? <><label>Finished product name<input name="productName" required placeholder="e.g. Merino wool shawl" /></label><label>Product or SKU reference<input name="productRef" required placeholder="e.g. SHAWL-2026-0142" /></label></> : role === "admin" && selected === "Verify farm source" ? <label>Verification note<textarea name="notes" required placeholder="Documents checked, visit reference or verifier note" /></label> : <><label>Location<input name="location" placeholder="Facility, village or district" /></label><label>Notes<textarea name="notes" placeholder="Weight, seal number, test reference or other proof" /></label></>}{message && <p className={message.startsWith("Saved") || message.startsWith("Certified") || message.startsWith("Verified") ? "form-success" : "form-error"}>{message}</p>}<button className="lime-button" type="submit" disabled={saving}>{saving ? "Saving…" : role === "brand" && selected === "Generate product QR" ? "Issue certificate & product QR" : role === "admin" && selected === "Verify farm source" ? "Verify source record" : "Save to QR passport"} {saving ? null : <CheckCircle2 />}</button></form></div>}
+    {scanOpen && <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="scan-title"><form className="portal-modal" onSubmit={openPassport}><button type="button" aria-label="Close QR scanner" className="modal-close" onClick={() => { stopScanner(); setScanOpen(false); }}><X /></button><QrCode /><p className="kicker">OPEN WOOL PASSPORT</p><h2 id="scan-title">Scan QR or enter its batch ID</h2><p>Use the rear camera or type the code printed below the label.</p><video className={`qr-camera ${scanning ? "active" : ""}`} ref={videoRef} muted playsInline aria-label="QR scanner camera preview" /><button className="camera-button" type="button" onClick={() => scanning ? stopScanner() : void startScanner()}><Camera /> {scanning ? "Stop camera" : "Scan with camera"}</button>{scanMessage && <p className="form-error">{scanMessage}</p>}<label>Batch ID<input name="batchId" defaultValue="WT-2610-KAR" required /></label><button className="lime-button" type="submit">Open passport <ArrowRight /></button></form></div>}
+    {selected && <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="event-title"><form className="portal-modal" onSubmit={saveEvent}><button type="button" aria-label="Close batch update" className="modal-close" onClick={() => setSelected("")}><X /></button><p className="kicker">{opensProductQr ? "PUBLIC WOOL QR" : "TIMELINE UPDATE"}</p><h2 id="event-title">{selected}</h2><p>{isCompletion ? "Add the actual completion date, final wool weight and a photo from shearing. The image is compressed before it is saved." : opensProductQr ? "Open the batch passport and use its downloadable QR on the finished product." : "This update becomes part of the public wool journey."}</p><label>Live batch ID<input name="batchId" required placeholder="WT-2610-ABCDE" /></label>{isCompletion ? <><div className="form-pair"><label>Completion date<input name="shearedAt" type="date" required /></label><label>Final wool weight (kg)<input name="finalWeightKg" type="number" min="0.1" step="0.1" required /></label></div><label>Shearing photo<input name="evidencePhoto" type="file" accept="image/*" capture="environment" required /></label><label>Farmer note<textarea name="notes" placeholder="Shearer, flock or condition notes" /></label></> : !opensProductQr && <><label>Location<input name="location" placeholder="Facility, village or district" /></label><label>Notes<textarea name="notes" placeholder="Weight, seal number, test reference or other details" /></label></>}{message && <p className={message.startsWith("Saved") ? "form-success" : "form-error"}>{message}</p>}<button className="lime-button" type="submit" disabled={saving}>{saving ? "Saving…" : opensProductQr ? "Open QR passport" : "Save to QR passport"} {saving ? null : <CheckCircle2 />}</button></form></div>}
   </>;
 }

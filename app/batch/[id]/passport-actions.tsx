@@ -10,5 +10,5 @@ export default function PassportActions({ batchId }: { batchId: string }) {
     if (navigator.share) await navigator.share(data).catch(() => undefined);
     else { await navigator.clipboard.writeText(window.location.href); setShared(true); }
   }
-  return <div className="passport-actions"><button className="certificate" onClick={() => window.print()}><Download /> Print or save certificate</button><button className="certificate" onClick={share}><Share2 /> {shared ? "Link copied" : "Share passport"}</button></div>;
+  return <div className="passport-actions"><button className="passport-button" onClick={() => window.print()}><Download /> Print or save QR passport</button><button className="passport-button" onClick={share}><Share2 /> {shared ? "Link copied" : "Share passport"}</button></div>;
 }

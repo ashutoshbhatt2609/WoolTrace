@@ -6,7 +6,7 @@ const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
 
 export const metadata: Metadata = {
   title: "WoolTrace | Every fibre has a story",
-  description: "Trace every wool batch from shearing to fabric and connect farmers directly with verified buyers.",
+  description: "Trace every wool batch from shearing to fabric and connect farmers directly with buyers.",
   icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
 };
 

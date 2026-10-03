@@ -5,11 +5,18 @@ CREATE TABLE `batch_events` (
 	`title` text NOT NULL,
 	`location` text,
 	`actor_id` text NOT NULL,
+	`actor_role` text,
 	`notes` text,
+	`previous_hash` text,
+	`event_hash` text,
+	`verified` integer DEFAULT false NOT NULL,
+	`evidence_image_data` text,
+	`evidence_image_hash` text,
 	`occurred_at` integer NOT NULL,
 	FOREIGN KEY (`batch_id`) REFERENCES `wool_batches`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE INDEX `idx_batch_events_batch_occurred` ON `batch_events` (`batch_id`,`occurred_at`);--> statement-breakpoint
 CREATE TABLE `bids` (
 	`id` text PRIMARY KEY NOT NULL,
 	`batch_id` text NOT NULL,
@@ -43,20 +50,7 @@ CREATE TABLE `farms` (
 	`district` text NOT NULL,
 	`state` text NOT NULL,
 	`flock_size` integer DEFAULT 0 NOT NULL,
-	`verified` integer DEFAULT false NOT NULL,
 	FOREIGN KEY (`owner_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
-);
---> statement-breakpoint
-CREATE TABLE `service_listings` (
-	`id` text PRIMARY KEY NOT NULL,
-	`provider_id` text NOT NULL,
-	`type` text NOT NULL,
-	`name` text NOT NULL,
-	`district` text NOT NULL,
-	`price_label` text NOT NULL,
-	`rating` real DEFAULT 0 NOT NULL,
-	`verified` integer DEFAULT false NOT NULL,
-	FOREIGN KEY (`provider_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE TABLE `users` (
@@ -66,6 +60,8 @@ CREATE TABLE `users` (
 	`picture` text,
 	`role` text DEFAULT 'farmer' NOT NULL,
 	`locale` text DEFAULT 'en' NOT NULL,
+	`upi_vpa` text,
+	`upi_name` text,
 	`created_at` integer NOT NULL
 );
 --> statement-breakpoint

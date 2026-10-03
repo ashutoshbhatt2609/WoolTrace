@@ -19,7 +19,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <span className="auth-icon"><LockKeyhole /></span>
           <p className="kicker">SECURE ACCESS</p>
           <h2>Welcome to WoolTrace</h2>
-          <p>Sign in to manage batches, offers, certificates, bookings and the complete wool journey.</p>
+          <p>Sign in to record shearing, manage batches, compare offers and maintain each wool journey.</p>
           {error === "demo-disabled" && <div className="auth-alert">The demo account is temporarily unavailable.</div>}
           {error && error !== "configuration" && error !== "demo-disabled" && <div className="auth-alert">Sign-in could not be completed. Please try again.</div>}
           <a className="demo-button" href="/api/auth/demo">
