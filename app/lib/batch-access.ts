@@ -26,7 +26,7 @@ export async function requireParticipant(tx: Transaction, batch: typeof woolBatc
 }
 export async function appendEvent(tx: Transaction, input: {
   batchId: string; eventType: string; title: string; actorId: string; actorRole: string;
-  location?: string | null; notes?: string | null; evidenceImageData?: string | null;
+  location?: string | null; notes?: string | null; evidenceImageData?: string | null; performedAt?: Date | null;
 }) {
   const [last] = await tx.select().from(batchEvents).where(eq(batchEvents.batchId, input.batchId)).orderBy(desc(batchEvents.occurredAt)).limit(1);
   // A write transaction serializes updates; strictly increasing timestamps preserve chain order.

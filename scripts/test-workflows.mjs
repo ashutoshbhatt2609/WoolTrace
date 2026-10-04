@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createHmac, randomBytes } from "node:crypto";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -12,10 +12,11 @@ import { migrate } from "drizzle-orm/libsql/migrator";
 const dir=await mkdtemp(path.join(tmpdir(),"wooltrace-test-"));
 const url="file:"+path.join(dir,"test.db").replaceAll("\\","/");
 const client=createClient({url});await migrate(drizzle(client),{migrationsFolder:"./drizzle"});
-const base="http://localhost:3123",secret=randomBytes(48).toString("hex");
+const port=process.env.TEST_PORT||"3124";
+const base="http://localhost:"+port,secret=randomBytes(48).toString("hex");
 const today=new Date().toISOString().slice(0,10);
 const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,10);
-const server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-p","3123"],{env:{...process.env,AUTH_SECRET:secret,TURSO_DATABASE_URL:url,TURSO_AUTH_TOKEN:"",APP_BASE_URL:base,DEMO_MODE:"true",GOOGLE_CLIENT_ID:"test",GOOGLE_CLIENT_SECRET:"test"},stdio:["ignore","pipe","pipe"],windowsHide:true});
+const server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-p",port],{env:{...process.env,AUTH_SECRET:secret,TURSO_DATABASE_URL:url,TURSO_AUTH_TOKEN:"",APP_BASE_URL:base,DEMO_MODE:"false",GOOGLE_CLIENT_ID:"",GOOGLE_CLIENT_SECRET:""},stdio:["ignore","pipe","pipe"],windowsHide:true});
 let logs="";server.stdout.on("data",d=>logs+=d);server.stderr.on("data",d=>logs+=d);
 const users={farmer:{sub:"test-farmer",email:"farmer@example.test",name:"Test Farmer"},buyer:{sub:"test-buyer",email:"buyer@example.test",name:"Test Buyer"},stranger:{sub:"test-stranger",email:"stranger@example.test",name:"Other Farmer"},lab:{sub:"test-lab",email:"lab@example.test",name:"Test Lab"},processor:{sub:"test-processor",email:"processor@example.test",name:"Test Processor"}};
 function cookie(who){const payload=Buffer.from(JSON.stringify({...users[who],exp:Date.now()+3600000})).toString("base64url");return "wooltrace_session="+payload+"."+createHmac("sha256",secret).update(payload).digest("base64url");}
@@ -85,6 +86,74 @@ try{
  await api("processor","/api/batches/events","POST",{batchId,portalRole:"processor",title:"Spinning completed",location:"Test facility"},403);
  for(const route of ["/","/login","/privacy","/terms","/labs","/batch/WT-2610-KAR"]){assert.equal((await fetch(base+route)).status,200,route);checks++;}
  for(const route of ["/dashboard","/workspace/my-wool","/portal/farmer","/profile"]){const r=await fetch(base+route,{redirect:"manual"});const html=await r.text();assert.ok(r.status===307 || (r.status===200 && html.includes('url=/login')),route+" must redirect before private content renders");checks++;}
+
+ // Role-specific pages and legacy demo isolation.
+ const roles={farmer:"farmer",buyer:"buyer",lab:"laboratory",processor:"processor",transporter:"transporter",warehouse:"warehouse",brand:"brand"};
+ for(const role of ["transporter","warehouse","brand"]){users[role]={sub:"test-"+role,email:role+"@example.test",name:"Test "+role};await api(role,"/api/profile","PATCH",{role});}
+ for(const [who,role] of Object.entries(roles)){
+  const response=await fetch(base+"/dashboard",{headers:{Cookie:cookie(who)}});
+  assert.equal(response.status,200);const html=await response.text();
+  const nav=html.match(/<nav aria-label="Workspace navigation">([\s\S]*?)<\/nav>/)?.[1];assert.ok(nav,"Role navigation renders: "+role);
+  assert.ok(nav.includes("/portal/"+role));assert.equal(nav.includes('href="/workspace/woolkart"'),role==="buyer");
+  assert.equal(nav.includes('href="/workspace/my-wool"'),["farmer","buyer"].includes(role));
+  assert.equal(nav.includes('href="/workspace/quality"'),role==="laboratory");checks+=5;
+  const mismatch=role==="farmer"?"buyer":"farmer";
+  const redirect=await fetch(base+"/portal/"+mismatch,{headers:{Cookie:cookie(who)},redirect:"manual"});
+  const redirectHtml=await redirect.text();
+  assert.ok(redirect.status===307?new URL(redirect.headers.get("location"),base).pathname==="/portal/"+role:redirect.status===200&&redirectHtml.includes("url=/portal/"+role),"Cross-role page redirects to own portal");checks++;
+  assert.equal((await fetch(base+"/demo/"+role)).status,200);checks++;
+ }
+ const labGuard=await fetch(base+"/workspace/my-wool",{headers:{Cookie:cookie("lab")},redirect:"manual"});assert.ok(labGuard.status===307?new URL(labGuard.headers.get("location"),base).pathname==="/dashboard":labGuard.status===200&&(await labGuard.text()).includes("url=/dashboard"));checks++;
+ await api("lab","/api/bids","GET",undefined,403);
+ const oldDemo=await fetch(base+"/api/batches",{headers:{Cookie:"wooltrace_demo_session=farmer"}});assert.equal(oldDemo.status,401);checks++;
+ const demoEntry=await fetch(base+"/api/auth/demo",{redirect:"manual"});assert.equal(new URL(demoEntry.headers.get("location"),base).pathname,"/demo");checks++;
+ assert.equal((await fetch(base+"/demo")).status,200);checks++;
+ await api("lab","/api/profile","PATCH",{role:"transporter"});
+ assert.equal((await api("lab","/api/batches")).batches.length,0,"Lab invitation must not appear in transporter workspace");checks++;
+ await api("lab","/api/profile","PATCH",{role:"laboratory"});
+ await api("buyer","/api/profile","PATCH",{role:"farmer"});
+ assert.equal((await api("buyer","/api/batches")).batches.length,0,"Purchases must not appear as farm-origin batches");checks++;
+ await api("buyer","/api/profile","PATCH",{role:"buyer"});
+
+
+ // Regression checks for previously reported edge cases.
+ await api("farmer","/api/batches","POST",{breed:"Deccani",weight:10,reserve:90,date:tomorrow,farmName:"Test Farm",village:"Test Village",district:"Chitradurga",state:"Karnataka",shearer:"Test Team"},400);
+ const validationBatch=(await api("farmer","/api/batches","POST",{breed:"Deccani",weight:10,reserve:90,date:today,farmName:"Validation Farm",village:"Test Village",district:"Chitradurga",state:"Karnataka",shearer:"Test Team"},201)).batch.id;
+ const invalidPhoto={batchId:validationBatch,portalRole:"farmer",title:"Complete shearing with photo",location:"Validation Farm",finalWeightKg:10,shearedAt:today,evidenceImageData:"data:image/jpeg;base64,/9j/"};
+ await api("farmer","/api/batches/events","POST",invalidPhoto,400);
+ await api("farmer","/api/batches/events","POST",{...invalidPhoto,shearedAt:tomorrow,evidenceImageData:"data:image/jpeg;base64,"+jpeg.toString("base64")},400);
+ const receipts=await api("farmer","/api/bids");assert.equal(receipts.bids.find(b=>b.id===bid.bid.id).paymentReference,"TEST-12345678");checks++;
+ assert.ok(!html.includes("TEST-12345678"),"Public passport must not include the full payment reference");checks++;
+ await api("buyer","/api/payments/upi?bidId="+bid.bid.id,"GET",undefined,409);
+ await api("buyer","/api/participants","POST",{batchId,email:users.transporter.email,role:"transporter"},201);
+ const handoff={batchId,portalRole:"transporter",location:"Test facility",performedAt:today};
+ await api("transporter","/api/batches/events","POST",{...handoff,title:"Delivery recorded"},409);
+ await api("transporter","/api/batches/events","POST",{...handoff,title:"Pickup recorded"},201);
+ await api("transporter","/api/batches/events","POST",{...handoff,title:"Pickup recorded"},409);
+ await api("transporter","/api/batches/events","POST",{...handoff,title:"Delivery recorded"},201);
+ await api("transporter","/api/batches/events","POST",{...handoff,title:"Pickup recorded"},201);
+ const transportRows=await api("transporter","/api/batches");assert.equal(transportRows.batches[0].status,"delivery_recorded","A second pickup must not regress the recorded progress");checks++;
+ await api("buyer","/api/participants","POST",{batchId,email:users.processor.email,role:"processor"},201);
+ const stage={batchId,portalRole:"processor",location:"Test mill",performedAt:today};
+ await api("processor","/api/batches/events","POST",{...stage,title:"Spinning completed"},409);
+ for(const title of ["Scouring completed","Carding completed","Spinning completed"])await api("processor","/api/batches/events","POST",{...stage,title},201);
+ await api("processor","/api/batches/events","POST",{...stage,title:"Spinning completed"},409);
+ await client.batch(Array.from({length:205},(_,i)=>({sql:"INSERT INTO wool_batches (id,farmer_id,breed,sheared_at,weight_kg,status,sale_status,reserve_price,current_owner_id,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",args:["WT-PAGE-"+String(i).padStart(4,"0"),users.farmer.sub,"Deccani",Date.now(),1,"registered","unlisted",90,users.farmer.sub,i]})),"write");
+ const pages=[];let total=0,weight=0;for(let page=1;page<=3;page++){const result=await api("farmer","/api/batches?page="+page+"&limit=100");pages.push(...result.batches.map(b=>b.id));total=result.pagination.total;weight=result.summary.totalWeightKg;if(page===3)assert.equal(result.pagination.hasNext,false);}
+ assert.equal(pages.length,207);assert.equal(new Set(pages).size,207);assert.equal(total,207);assert.equal(weight,315);checks+=4;
+ await api("farmer","/api/batches?page=0","GET",undefined,400);
+ const legacy=createClient({url:"file:"+path.join(dir,"legacy.db").replaceAll("\\","/")});
+ try{
+  await legacy.executeMultiple(await readFile("drizzle/0000_tranquil_jean_grey.sql","utf8"));
+  await legacy.executeMultiple(await readFile("drizzle/0001_thin_mindworm.sql","utf8"));
+  await legacy.execute("INSERT INTO users (id,email,name,created_at) VALUES ('old-farmer','oldfarmer@example.test','Old Farmer',1),('old-buyer','oldbuyer@example.test','Old Buyer',1)");
+  await legacy.execute("INSERT INTO wool_batches (id,farmer_id,breed,sheared_at,weight_kg,status,reserve_price,current_owner_id,created_at) VALUES ('WT-OLD-COMPLETE','old-farmer','Deccani',1,10,'shearing_complete',90,'old-farmer',1),('WT-OLD-SOLD','old-farmer','Deccani',1,10,'sold',90,'old-buyer',1)");
+  await legacy.execute("INSERT INTO bids (id,batch_id,buyer_id,price_per_kg,pickup_days,payment_terms,status,created_at) VALUES ('old-bid','WT-OLD-SOLD','old-buyer',95,3,'UPI','accepted',1)");
+  await legacy.executeMultiple(await readFile("drizzle/0002_reliability_and_receipts.sql","utf8"));
+  const rows=await legacy.execute("SELECT * FROM wool_batches ORDER BY id");assert.equal(rows.rows[0].completed_at,1);assert.equal(rows.rows[1].sale_status,"legacy_transferred");
+  assert.equal((await legacy.execute("SELECT status FROM bids")).rows[0].status,"legacy_transferred");checks+=3;
+ }finally{legacy.close();}
+
  console.log("PASS: "+checks+" workflow/security checks. Isolated local database only.");
  if(process.argv.includes("--serve"))console.log("Local UI test server remains available at "+base+" (demo mode enabled, temporary database).");
 }catch(error){console.error(error);console.error(logs.slice(-2000));process.exitCode=1;}

@@ -9,7 +9,7 @@ export const GET=api(async(request,user,member)=>{
  if(!id) return json({profile:{upiVpa:member.upiVpa,upiName:member.upiName}});
  const [offer]=await getDb().select({id:bids.id,batchId:bids.batchId,buyerId:bids.buyerId,price:bids.pricePerKg,status:bids.status,weight:woolBatches.weightKg,sellerId:woolBatches.farmerId,upiVpa:users.upiVpa,upiName:users.upiName}).from(bids).innerJoin(woolBatches,eq(woolBatches.id,bids.batchId)).innerJoin(users,eq(users.id,woolBatches.farmerId)).where(eq(bids.id,id)).limit(1);
  if(!offer || ![offer.sellerId,offer.buyerId].includes(user.sub)) throw new ApiError(404,"Offer not found.");
- if(!["accepted","paid"].includes(offer.status)) throw new ApiError(409,"This offer has not been accepted.");
+ if(offer.status!=="accepted") throw new ApiError(409,"Payment QR is available only for an accepted, unpaid offer.");
  if(!offer.upiVpa || !offer.upiName) throw new ApiError(409,"The seller needs to save their UPI payment details.");
  const amount=Number((offer.price*offer.weight).toFixed(2));
  const upiUri="upi://pay?"+new URLSearchParams({pa:offer.upiVpa,pn:offer.upiName,am:amount.toFixed(2),cu:"INR",tn:"WoolTrace "+offer.batchId,tr:offer.id}).toString();

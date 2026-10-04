@@ -11,7 +11,7 @@ Next.js 16.3.8, React 19, TypeScript, Drizzle and Turso/libSQL. Vercel hosts the
 Use Node.js 22.13+ (Vercel uses Node 24). Install with npm ci, copy .env.example to .env.local, fill your own values, run npm run db:migrate and npm run dev.
 APP_BASE_URL must be http://localhost:3000 for local sign-in, with the matching Google OAuth callback.
 
-Never commit .env files. Optional demo mode is for isolated development only; production uses DEMO_MODE=false.
+Never commit .env files. `/demo` offers seven browser-only role walkthroughs without authentication or API keys. Sample changes stay in sessionStorage per tab and role; no production records or payments are created. The old demo authentication cookie is no longer accepted. DEMO_MODE is a legacy setting and can remain false.
 
 ## Checks
 - npm run lint

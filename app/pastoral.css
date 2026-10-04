@@ -1,0 +1,90 @@
+/* Visual inspiration: mint countryside, ink-blue type and sunshine-yellow actions.
+   The original WoolTrace photography and functional content remain intact. */
+.pastoral-theme{--line:#d8e9df;--ink:#103f4c;--muted:#617c79;--green:#124d51;--cream:#f3fbf5;color:#103f4c}
+.khet-page.pastoral-theme{background:#f3fbf5;color:#103f4c}
+.pastoral-theme .khet-topbar{background:#d6eee5eF;border-color:#bfded2;height:84px}
+.pastoral-theme .khet-brand strong{text-transform:none;letter-spacing:-1px;font-size:23px;color:#124d42}
+.pastoral-theme .khet-mark{background:#ffdd57;color:#244e3e}
+.pastoral-theme .khet-nav{color:#234d52;gap:28px}
+.pastoral-theme .khet-signin{color:#163f48}
+.pastoral-theme .khet-open,.pastoral-theme .khet-primary{background:#ffda52;color:#143b42;border-radius:99px;box-shadow:none;font-weight:600}
+.pastoral-theme .khet-open:hover,.pastoral-theme .khet-primary:hover,.pastoral-theme .wt-button:hover{background:#f3cd3d}
+.pastoral-theme .khet-hero{background:#d6eee5;padding-top:68px;padding-bottom:52px;min-height:610px;gap:40px}
+.pastoral-theme .khet-hero h1{font-size:clamp(3.5rem,5.3vw,5.2rem);letter-spacing:-.055em;font-weight:700;line-height:1.03;color:#0b3d4c}
+.pastoral-theme .khet-hero h1 em{color:#4e7958}
+.pastoral-theme .khet-hero-copy>p{color:#426a6a;font-size:15px}
+.pastoral-theme .khet-chip,.pastoral-theme .khet-eyebrow{color:#527872;letter-spacing:.12em}
+.pastoral-theme .khet-photo-card{border-radius:180px 180px 20px 20px;border:7px solid #f5fbef;box-shadow:0 20px 45px #245d5917}
+.pastoral-theme .khet-signal-card,.pastoral-theme .khet-buyer-card{border-color:#f6f9ea;background:#fcfff5f0;border-radius:14px;box-shadow:0 14px 28px #285b5414}
+.pastoral-theme .khet-buyer-card b{font-size:1.08rem;color:#184b50}
+.pastoral-theme .khet-orbit{border-color:#7ba49b30}
+.pastoral-theme .khet-secondary{color:#285958}
+.wt-pasture{display:block;width:100%;height:auto;min-height:150px;max-height:300px}
+.wt-landing-pasture{margin-top:-1px}
+.pastoral-theme .khet-metrics{background:#fffef5;padding-top:8px;padding-bottom:8px}
+.pastoral-theme .khet-metrics div{border-color:#e5e8d6}
+.pastoral-theme .khet-metrics strong{color:#134951;font-size:1.4rem}
+.pastoral-theme .landing-portals{background:#f2fbf5}
+.pastoral-theme .landing-portals h2,.pastoral-theme .khet-section h2,.pastoral-theme .landing-lifecycle h2{color:#0b3e4d;font-weight:650;letter-spacing:-.045em}
+.pastoral-theme .landing-portals>div:last-child>a{background:#e3f4eb;border-color:#d1e9dc;border-radius:14px;color:#174850}
+.pastoral-theme .landing-portals>div:last-child>a:hover{background:#d4edde}
+.pastoral-theme .khet-section{padding-top:82px;padding-bottom:82px}
+.pastoral-theme .khet-how{background:#fffef7}
+.pastoral-theme .khet-steps{border-color:#d8e5d7}
+.pastoral-theme .khet-steps article{border-color:#d8e5d7}
+.pastoral-theme .khet-steps h3{color:#174651}
+.pastoral-theme .khet-platform{background:#0c4050;position:relative;overflow:hidden}
+.pastoral-theme .khet-platform:after{content:"";position:absolute;bottom:-150px;left:-8%;width:70%;height:230px;border-radius:50%;background:#4c897d35;pointer-events:none}
+.pastoral-theme .khet-platform h2,.pastoral-theme .khet-trust h2{color:#f4fbef;font-weight:600}
+.pastoral-theme .khet-eyebrow.light{color:#bddbce}
+.pastoral-theme .khet-platform-copy>p,.pastoral-theme .khet-checks p{color:#c4dcd7}
+.pastoral-theme .khet-workspace-card{background:#f5fcf4;border-color:#d2e9db;box-shadow:0 18px 55px #03273430}
+.pastoral-theme .khet-capabilities{background:#edf9f2}
+.pastoral-theme .khet-cap-grid>a{background:linear-gradient(180deg,#d9f0e6,#edf9f1);border-color:#d4e9dd;box-shadow:none;border-radius:18px}
+.pastoral-theme .khet-cap-grid h3{color:#123f4d;font-weight:650}
+.pastoral-theme .khet-cap-grid>a>svg{color:#47775a}
+.pastoral-theme .landing-lifecycle{background:#fffef8}
+.pastoral-theme .landing-lifecycle article{background:#f0f8ef;border-color:#dde9d9}
+.pastoral-theme .khet-trust{background:#174e56}
+.pastoral-theme .khet-trust p,.pastoral-theme .khet-trust-grid span{color:#c6ded8}
+.pastoral-theme .landing-final-cta{background:#d6eee5;color:#103f4c;padding-top:62px;padding-bottom:50px}
+.pastoral-theme .landing-final-cta h2{color:#103f4c;font-size:clamp(32px,4vw,52px)}
+.pastoral-theme .landing-final-cta .light{color:#557c71}
+.pastoral-theme .landing-final-cta>div:last-child>a:not(.khet-primary){color:#285b59}
+.pastoral-theme .khet-footer{background:#083c4c;color:#e6f5e9;border:0}
+.pastoral-theme .khet-footer .khet-brand strong{color:#e8f6d9}
+.pastoral-theme .khet-footer p,.pastoral-theme .khet-footer a:not(.khet-brand),.pastoral-theme .khet-footer small{color:#c1d7d1}
+.wt-app.pastoral-theme{background:#f2f8f3;color:#143f49}
+.pastoral-theme .wt-sidebar,.pastoral-theme .wt-mobile{background:#0b3e49}
+.pastoral-theme .wt-sidebar nav a[aria-current=page]{background:#d5ecdf;color:#174a49}
+.pastoral-theme .wt-wordmark>span{background:#ffda52;color:#234f46}
+.pastoral-theme .wt-role-label{background:#ffffff06;border-color:#8eb7ad30}
+.pastoral-theme .wt-role-dot{background:#ffdc59}
+.pastoral-theme .wt-role-hero{background:#d7eee3;border-color:#cce3d5;border-radius:20px}
+.pastoral-theme .wt-role-hero h2{color:#103f4c}
+.pastoral-theme .wt-role-hero p{color:#547670}
+.pastoral-theme .wt-role-illustration>div{background:#f9fbeb;color:#356c68;border-color:#bbd9ca;outline-color:#bbd9ca}
+.pastoral-theme .wt-role-guide,.pastoral-theme .wt-soft{background:#e5f3e9}
+.pastoral-theme .wt-card,.pastoral-theme .wt-metrics article{border-color:#dce9df;border-radius:16px}
+.pastoral-theme .wt-button{background:#ffda52;color:#163f46!important;border-color:transparent;border-radius:99px;font-weight:600}
+.pastoral-theme .wt-outline{border-color:#b9d3c7;color:#1c5558;border-radius:99px;background:#ffffff90}
+.pastoral-theme .wt-pill{background:#dfefe1;color:#396b58}
+.pastoral-theme .wt-page-head h1{color:#103f4c;font-weight:600;letter-spacing:-1.4px}
+.pastoral-theme .wt-metrics strong{color:#194b53}
+.pastoral-theme .wt-card h2{color:#174b54}
+.pastoral-theme .wt-numbered-steps li{border-color:#cfe3d4}
+.pastoral-theme .wt-text-link{color:#23605c!important}
+.pastoral-theme .wt-role-options label.selected{border-color:#62957d;background:#e4f3e8}
+.pastoral-theme .wt-batch-icon{background:#e3f2e7;color:#477e67}
+.wt-demo-picker.pastoral-theme{background:#ecf8f0;color:#103f4c;padding-bottom:0}
+.pastoral-theme .wt-demo-role-card{background:#fffef8;border-color:#d4e6d9;border-radius:18px}
+.pastoral-theme .wt-demo-role-card:nth-child(3n+2){background:#dff1e6}
+.pastoral-theme .wt-demo-role-icon{background:#f8ebac;border-color:#eddd98;color:#285b59}
+.pastoral-theme .wt-demo-intro h1{font-weight:650;color:#0b3e4d}
+.wt-demo-picker>.wt-pasture{margin-top:42px;border-radius:24px 24px 0 0;min-height:120px}
+.wt-app .wt-entry-form{margin-top:26px}.wt-entry-form>fieldset{gap:22px}.wt-form-intro{padding:14px 16px;background:#eff7f1;border-radius:10px}.wt-app .wt-field{gap:9px;color:#294e52;font-weight:500}.wt-field-name{display:flex;gap:4px;align-items:center;line-height:1.4;font-size:13px}.wt-field-name>small{margin-left:auto;color:#879891;font-size:10px;font-weight:400}.wt-required{color:#74886c;font-size:12px}.wt-input-wrap{display:block;position:relative;width:100%;min-width:0}.wt-app .wt-input-wrap input{min-height:49px;border:1px solid #ccded3;border-radius:9px;background:#fcfefb;font-size:14px;line-height:1.4;padding:13px 14px;color:#1d4851;transition:border-color .15s,box-shadow .15s}.wt-app .wt-input-wrap input::placeholder{color:#93a29b;font-size:13px}.wt-app .wt-input-wrap input:focus{outline:none;border-color:#528c79;box-shadow:0 0 0 3px #528c791a;background:#fff}.wt-input-wrap.has-unit input{padding-right:75px}.wt-input-unit{position:absolute;right:15px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:500;color:#7b9085;pointer-events:none}.wt-app .wt-field.has-error input{border-color:#b96746;background:#fffaf6}.wt-app .wt-field-hint{font-size:11px;font-weight:400;color:#7a8d80;line-height:1.6}.wt-app .wt-field-error{font-size:11px;font-weight:400;color:#a24b32;line-height:1.6;margin:0}.wt-entry-form select,.wt-entry-form textarea{font-size:14px!important;min-height:49px!important;line-height:1.6!important;border-radius:9px!important;background:#fcfefb!important;border-color:#ccded3!important}.wt-entry-form select:focus,.wt-entry-form textarea:focus{outline:none;box-shadow:0 0 0 3px #528c791a;border-color:#528c79!important}.wt-entry-form textarea{min-height:120px!important;padding:14px!important}.wt-entry-form input:disabled,.wt-entry-form select:disabled{background:#f2f4ed!important;color:#859283!important;cursor:wait}.wt-form-section{border-bottom:1px solid #e2ece2;padding:0 0 24px;margin:0}.wt-form-section>div:first-child{margin-bottom:18px}.wt-card .wt-form-section h3{font-size:14px;line-height:1.5;font-weight:600;color:#2b5958;margin:0 0 5px;letter-spacing:0}.wt-card .wt-form-section>div>p{font-size:11px;line-height:1.7;margin:0;color:#829186}.wt-form-section .wt-fields{gap:20px 18px}.wt-form-footer{display:flex;justify-content:space-between;align-items:center;gap:18px;border-top:1px solid #e2ebe0;padding-top:20px;margin-top:1px}.wt-form-footer>span{font-size:10px;line-height:1.7;max-width:150px;color:#8c9b8c}.wt-form-footer .wt-button{min-height:46px;white-space:normal;text-align:center;line-height:1.4;padding:12px 20px}.wt-form-feedback{display:flex;gap:10px;align-items:flex-start;padding:14px 16px;border-radius:10px;font-size:12px;line-height:1.7;margin-top:18px}.wt-form-feedback>svg{flex-shrink:0;margin-top:1px}.wt-form-feedback.is-error{background:#fff1e9;border:1px solid #edd2c3;color:#995339}.wt-form-feedback.is-success{background:#edf6e7;border:1px solid #cee1c1;color:#3b694a}.wt-spinner{animation:wt-spin .9s linear infinite}@keyframes wt-spin{to{transform:rotate(360deg)}}.wt-upload{position:relative;display:flex!important;align-items:center;gap:14px!important;border:1px dashed #92b5a2;border-radius:12px;padding:23px 18px;background:#f1f8f1;cursor:pointer;margin-top:23px}.wt-upload>svg{color:#659982;flex-shrink:0}.wt-upload>span:nth-child(2){display:grid;gap:7px;min-width:0;flex:1}.wt-upload strong{font-size:13px;font-weight:500;overflow-wrap:anywhere}.wt-upload small{font-size:10px;color:#819587;font-weight:400;line-height:1.6}.wt-app .wt-upload input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}.wt-upload:focus-within{outline:3px solid #70967c;outline-offset:3px}.wt-upload-action{border:1px solid #d2e2d6;background:white;border-radius:99px;padding:8px 12px;white-space:nowrap;font-size:10px}.wt-photo-preview{display:flex;gap:16px;align-items:center;padding:14px;border:1px solid #dce8da;border-radius:12px;margin-top:12px;background:#fff}.wt-photo-preview img{width:110px;height:90px;object-fit:cover;border-radius:8px}.wt-photo-preview strong{font-size:12px;color:#356651}.wt-card .wt-photo-preview p{font-size:10px;margin:7px 0}.wt-photo-preview button{display:flex;gap:5px;align-items:center;font-size:10px;color:#9a664b;text-decoration:underline;text-underline-offset:3px}.wt-load-more{text-align:center;margin:25px 0;padding:20px;border-top:1px solid #dce8df}.wt-load-more p{font-size:11px;color:#7a8d80;margin-bottom:14px}.wt-private-reference{display:grid;gap:6px;color:#3b694a!important;font-size:12px!important}.wt-private-reference code{overflow-wrap:anywhere}.wt-private-reference small{font-size:10px}.wt-event-logged{display:block;color:#8a9687;font-size:9px;margin-top:6px;line-height:1.6}
+@media(max-width:600px){.wt-form-footer{align-items:stretch;flex-direction:column;gap:12px}.wt-form-footer>span{max-width:none}.wt-form-footer .wt-button{width:100%}.wt-upload{padding:18px 14px;gap:10px!important;flex-wrap:wrap}.wt-upload-action{margin-left:36px}.wt-app .wt-input-wrap input,.wt-entry-form select,.wt-entry-form textarea{font-size:16px!important}.wt-fields{grid-template-columns:1fr!important}.wt-photo-preview img{width:85px;height:80px}.wt-role-options label{min-height:76px}.wt-form-section{padding-bottom:20px}}
+.pastoral-theme .wt-demo-banner{background:#fff4cf;border-color:#ebdfae}
+.wt-app .wt-field.has-error select{border-color:#b96746!important;background:#fffaf6!important}.wt-app .wt-field-hint,.wt-card .wt-form-section>div>p{color:#61786b}.wt-field-name>small,.wt-form-footer>span{color:#647b70}.wt-entry-form .wt-help{color:#61786b!important}
+@media(max-width:900px){.pastoral-theme .khet-hero{padding-top:42px;min-height:0}.pastoral-theme .khet-hero h1{font-size:clamp(3.2rem,8vw,4.6rem)}.pastoral-theme .khet-topbar{height:74px}.pastoral-theme .khet-section{padding-top:60px;padding-bottom:60px}.wt-pasture{height:180px;max-height:none}.pastoral-theme .wt-role-hero{border-radius:16px}}
+@media(max-width:540px){.pastoral-theme .khet-hero{padding-bottom:30px}.pastoral-theme .khet-hero h1{font-size:3.4rem}.pastoral-theme .khet-visual{min-height:390px}.pastoral-theme .khet-hero-copy>p{font-size:14px}.wt-pasture{height:145px}.pastoral-theme .khet-photo-card{inset:30px 48px 20px}.pastoral-theme .khet-buyer-card{width:177px;padding:13px}.pastoral-theme .khet-signal-card{width:155px;padding:13px}.pastoral-theme .khet-section h2{font-size:2.4rem}.wt-demo-picker>.wt-pasture{border-radius:16px 16px 0 0}}

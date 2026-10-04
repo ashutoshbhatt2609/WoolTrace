@@ -1,13 +1,18 @@
-import { and, desc, eq, ne, or } from "drizzle-orm";
+import { and, count, desc, eq, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { api, ApiError, body, json } from "@/app/lib/api";
 import { appendEvent, getBatch, requireOwner } from "@/app/lib/batch-access";
 import { getDb } from "@/db";
-import { bids, woolBatches } from "@/db/schema";
+import { bids, paymentReceipts, woolBatches } from "@/db/schema";
+import { pageInput, pageInfo } from "@/app/lib/pagination";
 
-export const GET=api(async(_request,user)=>{
- const records=await getDb().select({id:bids.id,batchId:bids.batchId,buyerId:bids.buyerId,pricePerKg:bids.pricePerKg,pickupDays:bids.pickupDays,paymentTerms:bids.paymentTerms,status:bids.status,createdAt:bids.createdAt,sellerId:woolBatches.farmerId,weightKg:woolBatches.weightKg}).from(bids).innerJoin(woolBatches,eq(bids.batchId,woolBatches.id)).where(or(eq(woolBatches.farmerId,user.sub),eq(bids.buyerId,user.sub))).orderBy(desc(bids.createdAt)).limit(200);
- return json({bids:records.map(b=>({...b,isSeller:b.sellerId===user.sub}))});
+export const GET=api(async(request,user,member)=>{
+ if(!["farmer","buyer"].includes(member.role))throw new ApiError(403,"Offers are available in farmer and buyer workspaces.");
+ const scope=member.role==="farmer"?eq(woolBatches.farmerId,user.sub):eq(bids.buyerId,user.sub);
+ const {page,limit,offset}=pageInput(request);
+ const [summary]=await getDb().select({total:count(),openOffers:sql<number>`coalesce(sum(case when ${bids.status} in ('active','accepted') then 1 else 0 end),0)`}).from(bids).innerJoin(woolBatches,eq(bids.batchId,woolBatches.id)).where(scope);
+ const records=await getDb().select({id:bids.id,batchId:bids.batchId,buyerId:bids.buyerId,pricePerKg:bids.pricePerKg,pickupDays:bids.pickupDays,paymentTerms:bids.paymentTerms,status:bids.status,createdAt:bids.createdAt,sellerId:woolBatches.farmerId,weightKg:woolBatches.weightKg,paymentReference:paymentReceipts.reference,paidAt:paymentReceipts.confirmedAt}).from(bids).innerJoin(woolBatches,eq(bids.batchId,woolBatches.id)).leftJoin(paymentReceipts,eq(paymentReceipts.bidId,bids.id)).where(scope).orderBy(desc(bids.createdAt),desc(bids.id)).limit(limit).offset(offset);
+ return json({bids:records.map(b=>({...b,isSeller:b.sellerId===user.sub})),summary,pagination:pageInfo(page,limit,summary.total)});
 });
 export const POST=api(async(request,user,member)=>{
  if(member.role!=="buyer") throw new ApiError(403,"Select the buyer role in your profile to make offers.");
@@ -54,6 +59,7 @@ export const PATCH=api(async(request,user)=>{
    if(!data.reference) throw new ApiError(400,"Enter the transaction reference after checking your bank account.");
    if(bid.status!=="accepted" || batch.saleStatus!=="accepted") throw new ApiError(409,"Only an accepted, unpaid offer can be confirmed.");
    await tx.update(bids).set({status:"paid"}).where(eq(bids.id,bid.id));
+   await tx.insert(paymentReceipts).values({id:crypto.randomUUID(),bidId:bid.id,reference:data.reference,amount:Math.round(bid.pricePerKg*batch.weightKg*100)/100,confirmedBy:user.sub,confirmedAt:new Date()});
    await tx.update(woolBatches).set({saleStatus:"paid",currentOwnerId:bid.buyerId}).where(eq(woolBatches.id,batch.id));
    await appendEvent(tx,{batchId:batch.id,eventType:"payment_confirmed",title:"Seller confirmed payment and transferred ownership",actorId:user.sub,actorRole:"farmer",notes:"Payment confirmed manually by seller, not by a bank integration. Reference ending "+data.reference.slice(-4)+"."});
   }

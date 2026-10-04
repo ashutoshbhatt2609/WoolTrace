@@ -1,28 +1,33 @@
-import { and, desc, eq, inArray, or } from "drizzle-orm";
+import { and, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { api, ApiError, body, json } from "@/app/lib/api";
 import { appendEvent, getBatch, requireOwner } from "@/app/lib/batch-access";
 import { getDb } from "@/db";
 import { batchParticipants, bids, farms, woolBatches } from "@/db/schema";
+import { pastDate } from "@/app/lib/dates";
+import { pageInput, pageInfo } from "@/app/lib/pagination";
 
 const input = z.object({
  breed:z.string().trim().min(2).max(80), weight:z.coerce.number().positive().max(100000),
- reserve:z.coerce.number().nonnegative().max(1000000), date:z.coerce.date(),
+ reserve:z.coerce.number().nonnegative().max(1000000), date:pastDate,
  farmName:z.string().trim().min(2).max(100), village:z.string().trim().min(2).max(100),
  district:z.string().trim().min(2).max(100), state:z.string().trim().min(2).max(100), shearer:z.string().trim().min(2).max(100)
 });
-export const GET=api(async(request,user)=>{
+export const GET=api(async(request,user,member)=>{
  const db=getDb();
- const invites=await db.select({id:batchParticipants.batchId}).from(batchParticipants).where(eq(batchParticipants.email,user.email.toLowerCase()));
+ const invites=await db.select({id:batchParticipants.batchId}).from(batchParticipants).where(and(eq(batchParticipants.email,user.email.toLowerCase()),eq(batchParticipants.role,member.role)));
  const marketplace=new URL(request.url).searchParams.get("scope")==="marketplace";
- const records=await db.select().from(woolBatches).where(marketplace ? eq(woolBatches.saleStatus,"listed") : or(eq(woolBatches.farmerId,user.sub),eq(woolBatches.currentOwnerId,user.sub),inArray(woolBatches.id,invites.map(i=>i.id)))).orderBy(desc(woolBatches.createdAt)).limit(200);
+ const roleScope=member.role==="farmer"?eq(woolBatches.farmerId,user.sub):member.role==="buyer"?and(eq(woolBatches.currentOwnerId,user.sub),ne(woolBatches.farmerId,user.sub)):inArray(woolBatches.id,invites.map(i=>i.id));
+ const scope=marketplace?eq(woolBatches.saleStatus,"listed"):roleScope;
+ const {page,limit,offset}=pageInput(request);
+ const [summary]=await db.select({batches:count(),totalWeightKg:sql<number>`coalesce(sum(${woolBatches.weightKg}),0)`}).from(woolBatches).where(scope);
+ const records=await db.select().from(woolBatches).where(scope).orderBy(desc(woolBatches.createdAt),desc(woolBatches.id)).limit(limit).offset(offset);
  const offers=records.length ? await db.select({batchId:bids.batchId}).from(bids).where(and(inArray(bids.batchId,records.map(b=>b.id)),eq(bids.status,"active"))) : [];
- return json({batches:records.map(b=>({...b,weight:b.weightKg,price:b.reservePrice,source:"live",isOwner:b.currentOwnerId===user.sub,isFarmer:b.farmerId===user.sub,bids:offers.filter(o=>o.batchId===b.id).length}))});
+ return json({batches:records.map(b=>({...b,weight:b.weightKg,price:b.reservePrice,source:"live",isOwner:b.currentOwnerId===user.sub,isFarmer:b.farmerId===user.sub,bids:offers.filter(o=>o.batchId===b.id).length})),summary,pagination:pageInfo(page,limit,summary.batches)});
 });
 export const POST=api(async(request,user,member)=>{
  if(member.role!=="farmer") throw new ApiError(403,"Choose the farmer role in your profile to register wool.");
  const data=await body(request,input);
- if(data.date.getTime()>Date.now()+86400000) throw new ApiError(400,"The shearing start date cannot be in the future.");
  const id="WT-"+crypto.randomUUID().toUpperCase();
  await getDb().transaction(async tx=>{
   const farmId=crypto.randomUUID();
@@ -38,7 +43,7 @@ export const PATCH=api(async(request,user)=>{
   const batch=await getBatch(tx,data.batchId); requireOwner(batch,user.sub);
   if(batch.farmerId!==user.sub) throw new ApiError(403,"Only the source farmer can list this batch.");
   if(!batch.completedAt) throw new ApiError(409,"Complete shearing with a photo before listing.");
-  if(["accepted","paid"].includes(batch.saleStatus)) throw new ApiError(409,"This batch already has an accepted sale.");
+  if(["accepted","paid","legacy_transferred"].includes(batch.saleStatus)) throw new ApiError(409,"This batch already has an accepted sale or a historical ownership transfer.");
   await tx.update(woolBatches).set({reservePrice:data.reserve,saleStatus:data.listed?"listed":"unlisted"}).where(eq(woolBatches.id,batch.id));
   await appendEvent(tx,{batchId:batch.id,eventType:"listing_updated",title:data.listed?"Batch listed for direct offers":"Batch removed from marketplace",actorId:user.sub,actorRole:"farmer",notes:"Reserve price: ₹"+data.reserve+"/kg."});
  });

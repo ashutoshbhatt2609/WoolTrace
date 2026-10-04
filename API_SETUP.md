@@ -14,7 +14,7 @@ Google callback: https://wool-trace.vercel.app/api/auth/google/callback
 ## No API key needed
 - BHIM/UPI QR: seller saves their own UPI ID in **My profile**. An accepted buyer can scan the generated QR. The seller manually confirms bank credit.
 - Batch/product QR: generated in the app and points to the public passport.
-- Photo compression: performed in the browser, then compressed JPEG is stored in Turso.
+- Photo compression: performed in the browser; the server then decodes, validates and recompresses the JPEG with Sharp before storing it in Turso. Invalid or truncated images are rejected.
 - Lab map links: existing directory links open maps for outreach. No Google Maps billing key is required.
 
 ## Optional weather
@@ -35,5 +35,7 @@ Weather is not required to register, trace or trade wool.
 Authenticated and rate-limited: /api/profile, /api/batches, /api/batches/events, /api/batches/quality, /api/bids, /api/participants, /api/lots, /api/bookings, /api/payments/upi, /api/live/overview.
 Public operational health: /api/health (no credentials or user data returned).
 Public history: /batch/:id and /lot/:id.
+
+Batch, offer and service-plan lists are paginated; dashboards use database-wide summaries for the account, not only the first page. Stage records store the actual work date separately from their submission time. Full payment references are private to the seller and winning buyer; public histories display only the final four characters.
 
 Do not paste secrets into chat. Set them in Vercel **Project Settings → Environment Variables** and redeploy. Production and preview should have separate databases.

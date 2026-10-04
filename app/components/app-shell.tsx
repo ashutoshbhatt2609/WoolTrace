@@ -2,15 +2,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import { Sprout, LayoutDashboard, Package, Store, HandCoins, QrCode, CalendarDays, UserRound, Menu, X, ArrowUpRight, LogOut, Workflow } from "lucide-react";
+import { Sprout, LayoutDashboard, Package, Store, HandCoins, QrCode, CalendarDays, UserRound, Menu, X, ArrowUpRight, LogOut, Workflow, FlaskConical } from "lucide-react";
 import type { GoogleUser } from "@/app/lib/google-auth";
+import { workspaceFor, canOpenModule } from "@/app/lib/workspaces";
 const links=[
  ["/dashboard","Overview",LayoutDashboard],["/workspace/my-wool","My wool",Package],["/workspace/woolkart","Marketplace",Store],
- ["/workspace/reverse-bidding","Offers & payments",HandCoins],["/workspace/traceability","Trace a batch",QrCode],["/workspace/services","Service planner",CalendarDays],["/workspace/market-prices","Farm weather",CalendarDays],["/profile","My profile",UserRound]
+ ["/workspace/reverse-bidding","Offers & payments",HandCoins],["/workspace/quality","Measurements",FlaskConical],["/workspace/traceability","Trace a batch",QrCode],["/workspace/services","Service planner",CalendarDays],["/workspace/market-prices","Farm weather",CalendarDays],["/profile","My profile",UserRound]
 ] as const;
-export default function AppShell({user,children}:{user:GoogleUser;children:ReactNode}){
+export default function AppShell({user,role,children,demo=false}:{user:GoogleUser;role:string;children:ReactNode;demo?:boolean}){
  const pathname=usePathname(),[open,setOpen]=useState(false);
- return <div className="wt-app"><header className="wt-mobile"><Link href="/dashboard"><Sprout/> WoolTrace</Link><button aria-label={open?"Close navigation":"Open navigation"} aria-expanded={open} onClick={()=>setOpen(!open)}>{open?<X/>:<Menu/>}</button></header>
- <aside className={"wt-sidebar "+(open?"is-open":"")}><Link href="/" className="wt-wordmark"><span><Sprout/></span>WoolTrace</Link><p className="wt-eyebrow">FARM TO FABRIC</p><nav>{links.map(([href,label,Icon])=><Link key={href} href={href} onClick={()=>setOpen(false)} aria-current={pathname===href?"page":undefined}><Icon size={19}/>{label}</Link>)}<Link href="/portals"><Workflow size={19}/> Stage workspaces</Link></nav><div className="wt-sidebar-bottom"><Link href="/labs">Karnataka lab directory <ArrowUpRight size={16}/></Link><div className="wt-account"><span>{user.name.charAt(0)}</span><div><strong>{user.name}</strong><small>{user.sub==="demo-farmer"?"Local demo":"Google account"}</small></div><a href="/api/auth/logout" aria-label="Sign out"><LogOut size={18}/></a></div></div></aside>
- <main className="wt-main">{children}</main></div>;
+ const workspace=workspaceFor(role), home=demo?"/demo/"+role:"/dashboard";
+ const visible=links.filter(([href])=>!href.startsWith("/workspace/")||canOpenModule(role,href.split("/").pop()!));
+ return <div className="wt-app pastoral-theme"><a className="wt-skip" href="#workspace-content">Skip to content</a><header className="wt-mobile"><Link href={home}><Sprout/> WoolTrace</Link><button aria-label={open?"Close navigation":"Open navigation"} aria-expanded={open} onClick={()=>setOpen(!open)}>{open?<X/>:<Menu/>}</button></header>
+ {open&&<button className="wt-nav-backdrop" aria-label="Close navigation" onClick={()=>setOpen(false)}/>}
+ <aside className={"wt-sidebar "+(open?"is-open":"")}><Link href="/" className="wt-wordmark"><span><Sprout/></span>WoolTrace</Link><div className="wt-role-label"><span className="wt-role-dot"/><div><strong>{workspace.title}</strong><small>{demo?"INTERACTIVE DEMO":"YOUR CONNECTED WORKSPACE"}</small></div></div><nav aria-label="Workspace navigation">{demo?<><Link href={home} aria-current="page"><LayoutDashboard size={19}/> Demo overview</Link><Link href="#demo-task" onClick={()=>setOpen(false)}><Workflow size={19}/> Try your workflow</Link><Link href="/demo"><UserRound size={19}/> Try another role</Link></>:<>{visible.map(([href,label,Icon])=><Link key={href} href={href} onClick={()=>setOpen(false)} aria-current={pathname===href?"page":undefined}><Icon size={19}/>{href==="/workspace/my-wool"&&role==="buyer"?"Purchased wool":href==="/workspace/reverse-bidding"&&role==="buyer"?"My offers & payments":label}</Link>)}<Link href={"/portal/"+role} aria-current={pathname==="/portal/"+role?"page":undefined}><Workflow size={19}/> My stage workspace</Link></>}</nav><div className="wt-sidebar-bottom">{demo?<Link href="/login">Sign in for real work <ArrowUpRight size={16}/></Link>:<><Link href="/demo">Explore a demo <ArrowUpRight size={16}/></Link>{["farmer","buyer","laboratory"].includes(role)&&<Link href="/labs">Karnataka lab directory <ArrowUpRight size={16}/></Link>}</>}<div className="wt-account"><span>{user.name.charAt(0)}</span><div><strong>{user.name}</strong><small>{demo?"Sample account · this tab only":"Google account"}</small></div><a href={demo?"/demo":"/api/auth/logout"} aria-label={demo?"Leave demo":"Sign out"}><LogOut size={18}/></a></div></div></aside>
+ <main className="wt-main" id="workspace-content">{children}</main></div>;
 }

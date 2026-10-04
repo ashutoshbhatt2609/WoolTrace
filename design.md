@@ -1,26 +1,36 @@
 # WoolTrace design system
 
 ## Direction
-A farmer-first agricultural interface in forest green, warm off-white and pastel sage. Preserve public/wooltrace-hero.png. The landing page is editorial and spacious; workspaces prioritize readable forms, honest statuses and practical next steps.
+A farmer-first agricultural interface inspired by the supplied pastoral reference: mint countryside, deep blue-green type, cream surfaces and sunshine-yellow actions. Borrow the visual language only, not Havens branding, copy, cows or testimonials. Preserve public/wooltrace-hero.png. Original decorative SVG hills and sheep connect public sections; workspaces keep decoration restrained so tasks remain readable.
 
 ## Tokens
-- Workspace canvas: #F5F6F0
-- Forest/sidebar: #183B2B
-- Primary action: #28503A with white text
-- Sage banner: #E6ECCF
-- Secondary pastel surface: #EDF1E4
-- Selected navigation: #D6EDB6
-- Borders: #DEE5D7
-- Landing lime remains an accent, never light text on white.
+- Workspace canvas: #F2F8F3
+- Deep teal/sidebar: #0B3E49
+- Primary action: #FFDA52 with #163F46 text
+- Mint hero: #D6EEE5
+- Secondary pastel surface: #E5F3E9
+- Selected navigation: #D5ECDF
+- Borders: #D8E9DF
+- Cream: #FFFEF8. Yellow is an action accent, never light text on white.
 
 ## Layout
 Shared AppShell across account screens. Desktop has a 240px navigation rail and a flexible content area. Below 800px the rail becomes a labelled menu. Forms collapse to one column; controls remain at least 43px high. Rounded 8–16px surfaces, restrained shadows and no excessive decorative gradients.
+
+## Role-specific workspaces and demo
+- A single role configuration controls the sidebar, dashboard guidance and allowed workspace pages. Buyers never receive shearing forms; partner roles see assigned stage tools. Direct links to another role redirect to the selected workspace.
+- Onboarding previews all seven roles with native accessible radio controls. Roles are self-selected, not certification or automatic batch access.
+- Demo entry is available at /demo without Google or database credentials. Each role has a short interactive walkthrough using sessionStorage, separated by role and browser tab. No real API mutations, payments or authentication cookies are created.
+- Demo numbers and actions are labelled sample. A demo QR opens the fixed illustrative public passport, not the locally edited sample history. Real dashboards continue to use account records only.
+- Pastoral overrides live in app/pastoral.css; functional layout and responsive rules live in app/globals.css. Keep the decorative SVG aria-hidden and respect reduced-motion preferences.
 
 Landing imagery is not replaced. Floating cards explain the product instead of inventing demand or price metrics.
 
 ## Components and interactions
 - Every icon-only action has an accessible name.
 - Every form has labelled inputs, fieldset busy state, server-backed validation and announced success/error feedback.
+- Group longer forms into named steps. Use comfortable input heights, example placeholders, units, optional/required labels and field-level errors for both text inputs and dropdowns. Focus the first invalid field and prevent duplicate submission while saving.
+- Keep the primary yellow button label dark teal for legible contrast. Mobile form inputs use 16px text and a single-column layout.
+- Photo uploads show a compressed preview, filename and remove action before the user submits.
 - Dashboard numbers come from account-linked database records. Empty accounts get a useful empty state, not sample trading figures.
 - Sample passports are prominently labelled illustrative and do not name real laboratories as fictional partners.
 - Dangerous sale confirmation requires an explicit acknowledgement and transaction reference.

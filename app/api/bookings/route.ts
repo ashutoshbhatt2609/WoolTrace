@@ -1,13 +1,14 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { api, ApiError, body, json } from "@/app/lib/api";
 import { getBatch, requireOwner } from "@/app/lib/batch-access";
 import { getDb } from "@/db";
 import { bookings } from "@/db/schema";
-export const GET=api(async(_request,user)=>json({bookings:await getDb().select().from(bookings).where(eq(bookings.userId,user.sub)).orderBy(desc(bookings.scheduledAt)).limit(200)}));
+import { plannedDate } from "@/app/lib/dates";
+import { pageInput, pageInfo } from "@/app/lib/pagination";
+export const GET=api(async(request,user)=>{const {page,limit,offset}=pageInput(request);const scope=eq(bookings.userId,user.sub);const [total]=await getDb().select({count:count()}).from(bookings).where(scope);return json({bookings:await getDb().select().from(bookings).where(scope).orderBy(desc(bookings.scheduledAt),desc(bookings.id)).limit(limit).offset(offset),pagination:pageInfo(page,limit,total.count)});});
 export const POST=api(async(request,user)=>{
- const data=await body(request,z.object({batchId:z.string().optional(),kind:z.enum(["transport","warehouse","shearing","veterinary","quality","processing"]),providerName:z.string().trim().min(2).max(120),scheduledAt:z.coerce.date()}));
- if(data.scheduledAt.getTime()<Date.now()-86400000) throw new ApiError(400,"Choose today or a future date.");
+ const data=await body(request,z.object({batchId:z.string().optional(),kind:z.enum(["transport","warehouse","shearing","veterinary","quality","processing"]),providerName:z.string().trim().min(2).max(120),scheduledAt:plannedDate}));
  const id=crypto.randomUUID();
  await getDb().transaction(async tx=>{
   if(data.batchId) requireOwner(await getBatch(tx,data.batchId),user.sub);

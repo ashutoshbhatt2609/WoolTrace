@@ -56,6 +56,7 @@ export const batchEvents = sqliteTable("batch_events", {
   verified: integer("verified", { mode: "boolean" }).notNull().default(false),
   evidenceImageData: text("evidence_image_data"),
   evidenceImageHash: text("evidence_image_hash"),
+  performedAt: integer("performed_at", { mode: "timestamp_ms" }),
   occurredAt: integer("occurred_at", { mode: "timestamp_ms" }).notNull(),
 }, (table) => [index("idx_batch_events_batch_occurred").on(table.batchId, table.occurredAt)]);
 
@@ -79,6 +80,16 @@ export const bookings = sqliteTable("bookings", {
   scheduledAt: integer("scheduled_at", { mode: "timestamp_ms" }).notNull(),
   status: text("status").notNull().default("requested"),
 });
+
+// Private reconciliation details are returned only to the seller or winning buyer.
+export const paymentReceipts = sqliteTable("payment_receipts", {
+  id: text("id").primaryKey(),
+  bidId: text("bid_id").notNull().references(() => bids.id),
+  reference: text("reference").notNull(),
+  amount: real("amount").notNull(),
+  confirmedBy: text("confirmed_by").notNull().references(() => users.id),
+  confirmedAt: integer("confirmed_at", { mode: "timestamp_ms" }).notNull(),
+}, table => [uniqueIndex("receipt_bid").on(table.bidId)]);
 
 export const batchParticipants = sqliteTable("batch_participants", {
   id: text("id").primaryKey(),

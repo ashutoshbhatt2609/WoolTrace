@@ -11,6 +11,7 @@ type IntegrityInput = {
   occurredAt: Date;
   previousHash?: string | null;
   evidenceImageHash?: string | null;
+  performedAt?: Date | null;
 };
 
 export async function hashBatchEvent(input: IntegrityInput) {
@@ -25,6 +26,8 @@ export async function hashBatchEvent(input: IntegrityInput) {
     occurredAt: input.occurredAt.toISOString(),
     previousHash: input.previousHash ?? null,
     evidenceImageHash: input.evidenceImageHash ?? null,
+    // Omit the new field for legacy events so their existing hashes remain valid.
+    ...(input.performedAt ? { performedAt: input.performedAt.toISOString() } : {}),
   });
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
