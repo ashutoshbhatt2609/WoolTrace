@@ -1,0 +1,10 @@
+import { ArrowLeft, ArrowRight, LockKeyhole, Sprout } from "lucide-react";
+import Link from "next/link";
+import { getGoogleUser, googleAuthConfigured } from "@/app/lib/google-auth";
+import { redirect } from "next/navigation";
+export const dynamic="force-dynamic";
+export default async function LoginPage({searchParams}:{searchParams:Promise<{error?:string}>}){
+ if(await getGoogleUser())redirect("/dashboard");
+ const {error}=await searchParams;const configured=googleAuthConfigured();
+ return <main className="auth-shell"><section className="auth-art" aria-label="Wool farmer with sheep"><Link href="/" className="auth-brand"><span className="brand-mark"><Sprout/></span>WoolTrace</Link><div><p className="kicker light">FROM SHEEP TO SHELF</p><h1>Your wool.<br/>Your story.<br/>Your terms.</h1><p>A connected record for the people who grow, handle and make wool.</p></div></section><section className="auth-panel"><Link href="/" className="auth-back"><ArrowLeft size={16}/> Back home</Link><div className="auth-card"><span className="auth-icon"><LockKeyhole/></span><p className="kicker">LET’S GET STARTED</p><h2>Welcome to WoolTrace</h2><p>Use your Google account. Choose your role, record your wool and keep the whole journey together.</p>{error&&<p className="auth-alert" role="alert">We couldn’t complete sign-in. Please try again. If the problem continues, contact the site owner.</p>}{configured?<a className="google-button" href="/api/auth/google"><span className="google-g">G</span> Continue with Google <ArrowRight size={18}/></a>:<p className="auth-alert">Sign-in is temporarily unavailable. Please check back shortly.</p>}{process.env.DEMO_MODE==="true"&&<a className="demo-button" href="/api/auth/demo">Enter demo workspace →</a>}<p className="auth-note">No phone number or password required.<br/>By continuing, you agree to the <Link href="/terms">terms</Link> and acknowledge the <Link href="/privacy">privacy notice</Link>.</p></div></section></main>;
+}
