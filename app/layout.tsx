@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./pastoral.css";
+import "./comfort.css";
 
 
 export const metadata: Metadata = {

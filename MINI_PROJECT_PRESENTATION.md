@@ -89,7 +89,7 @@ Roles are self-selected. Selecting “laboratory” does not make an account acc
 3. Google asks the user to select an account and returns an authorization code.
 4. The callback checks state and exchanges the code using the server’s credentials and PKCE verifier.
 5. The application reads the verified account identity and creates an expiring, HMAC-signed session cookie.
-6. The account selects its role and organisation, then enters its workspace.
+6. The server matches the verified Google email to batch invitations. One assigned role opens that portal automatically. Multiple roles open My assignments so the member can choose a job. A new member with no invitations chooses a role during onboarding.
 
 The session cookie is HTTP-only, so normal browser JavaScript cannot read it. Secure cookies are used over HTTPS. Google credentials and the signing secret remain server environment variables. Google verifies account control; it does not verify a farm or the truth of a wool record.
 
@@ -132,7 +132,9 @@ The full reference, amount, confirming account and confirmation timestamp are av
 
 ### 6.5 Partner invitations and stage records
 
-The current owner grants an email access for a particular stage role. The invited participant signs in with the same Google email and selects that role. Their assigned batches appear in their workspace.
+The current owner grants an email access for a particular stage role. The invited participant signs in with the same Google email; the server routes them to their assigned workspace. My assignments lists all work granted to that email. Opening a job checks the invitation again, changes the active workspace, and preselects its batch. Normal API calls never override a deliberately chosen workspace. Removing an invitation immediately prevents further updates, even if an old assignment card is still open.
+
+Assignments grant stage access, not ownership or seller controls. A saved service plan is separate from an email assignment, and granting access does not send an email notification. The owner should tell the partner to sign in.
 
 The server checks both role and invitation when recording a stage. Transport requires pickup before delivery, and an open pickup cannot be duplicated. Storage requires intake before release. The supported scouring, carding, spinning and weaving stages follow their recorded prerequisites. Repeating a completed non-cyclic stage is rejected.
 

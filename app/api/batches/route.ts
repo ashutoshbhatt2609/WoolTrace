@@ -18,7 +18,8 @@ export const GET=api(async(request,user,member)=>{
  const invites=await db.select({id:batchParticipants.batchId}).from(batchParticipants).where(and(eq(batchParticipants.email,user.email.toLowerCase()),eq(batchParticipants.role,member.role)));
  const marketplace=new URL(request.url).searchParams.get("scope")==="marketplace";
  const roleScope=member.role==="farmer"?eq(woolBatches.farmerId,user.sub):member.role==="buyer"?and(eq(woolBatches.currentOwnerId,user.sub),ne(woolBatches.farmerId,user.sub)):inArray(woolBatches.id,invites.map(i=>i.id));
- const scope=marketplace?eq(woolBatches.saleStatus,"listed"):roleScope;
+ const selectedId=new URL(request.url).searchParams.get("batchId");
+ const scope=and(marketplace?eq(woolBatches.saleStatus,"listed"):roleScope,selectedId?eq(woolBatches.id,selectedId):undefined);
  const {page,limit,offset}=pageInput(request);
  const [summary]=await db.select({batches:count(),totalWeightKg:sql<number>`coalesce(sum(${woolBatches.weightKg}),0)`}).from(woolBatches).where(scope);
  const records=await db.select().from(woolBatches).where(scope).orderBy(desc(woolBatches.createdAt),desc(woolBatches.id)).limit(limit).offset(offset);

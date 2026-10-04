@@ -10,11 +10,11 @@ export async function requestJson<T=Record<string,unknown>>(url:string,init?:Req
  return data as T;
 }
 const FormContext=createContext<{errors:Record<string,string>}>({errors:{}});
-export function ActionForm({children,submit,onSubmit,success="Saved successfully.",intro}:{children:ReactNode;submit:string;onSubmit:(data:FormData)=>Promise<void>;success?:string;intro?:string}){
+export function ActionForm({children,submit,onSubmit,success="Saved successfully.",intro,disabled=false}:{children:ReactNode;submit:string;onSubmit:(data:FormData)=>Promise<void>;success?:string;intro?:string;disabled?:boolean}){
  const [busy,setBusy]=useState(false),[message,setMessage]=useState(""),[failed,setFailed]=useState(false),[errors,setErrors]=useState<Record<string,string>>({});
  const alert=useRef<HTMLDivElement>(null);
  async function save(e:FormEvent<HTMLFormElement>){
-  e.preventDefault();if(busy)return;const form=e.currentTarget;
+  e.preventDefault();if(busy||disabled)return;const form=e.currentTarget;
   const invalid=Array.from(form.elements).filter((el):el is HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement=>(el instanceof HTMLInputElement||el instanceof HTMLSelectElement||el instanceof HTMLTextAreaElement)&&!el.disabled&&!el.checkValidity());
   if(invalid.length){setErrors(Object.fromEntries(invalid.map(el=>[el.name,el.validationMessage])));setFailed(true);setMessage("Please check "+invalid.length+" "+(invalid.length===1?"field":"fields")+" before continuing.");invalid[0].focus();return;}
   const data=new FormData(form);setErrors({});setBusy(true);setMessage("");
@@ -23,7 +23,7 @@ export function ActionForm({children,submit,onSubmit,success="Saved successfully
   finally{setBusy(false);}
  }
  return <FormContext.Provider value={{errors}}><form className="wt-form wt-entry-form" onSubmit={save} noValidate aria-busy={busy} onChangeCapture={e=>{const name=e.target.getAttribute("name");if(name)setErrors(current=>{const next={...current};delete next[name];return next;});setMessage("");}}>
- {intro&&<p className="wt-form-intro">{intro}</p>}<fieldset disabled={busy}>{children}<div className="wt-form-footer"><span>Review your details before saving.</span><button className="wt-button" type="submit">{busy?<LoaderCircle className="wt-spinner" size={17}/>:null}{busy?"Saving your details…":submit}{!busy&&<ArrowRight size={17}/>}</button></div></fieldset>
+ {intro&&<p className="wt-form-intro">{intro}</p>}<fieldset disabled={busy||disabled}>{children}<div className="wt-form-footer"><span>Review your details before saving.</span><button className="wt-button" type="submit">{busy?<LoaderCircle className="wt-spinner" size={17}/>:null}{busy?"Saving your details…":submit}{!busy&&<ArrowRight size={17}/>}</button></div></fieldset>
  {message&&<div ref={alert} tabIndex={-1} role={failed?"alert":"status"} className={failed?"wt-form-feedback is-error":"wt-form-feedback is-success"}>{failed?<AlertCircle size={18}/>:<CheckCircle2 size={18}/>}<span>{message}</span></div>}</form></FormContext.Provider>;
 }
 export function Field({label,name,type="text",value,required=true,min,max,step,placeholder,help,unit,autoComplete,minLength,disabled=false}:{label:string;name:string;type?:string;value?:string|number;required?:boolean;min?:string|number;max?:string|number;step?:string;placeholder?:string;help?:string;unit?:string;autoComplete?:string;minLength?:number;disabled?:boolean}){

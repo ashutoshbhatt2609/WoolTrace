@@ -1,5 +1,6 @@
+import SheepMark from "@/app/components/sheep-mark";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, FlaskConical, Mail, MapPin, Phone, Sprout } from "lucide-react";
+import { ArrowLeft, ExternalLink, FlaskConical, Mail, MapPin, Phone } from "lucide-react";
 
 const leads = [
   {
@@ -36,7 +37,7 @@ const leads = [
 
 export default function KarnatakaLabsPage() {
   return <main className="labs-page">
-    <header className="labs-nav"><Link href="/" className="portal-brand"><span className="brand-mark"><Sprout /></span> WoolTrace</Link><Link href="/dashboard"><ArrowLeft /> Dashboard</Link></header>
+    <header className="labs-nav"><Link href="/" className="portal-brand"><span className="brand-mark"><SheepMark /></span> WoolTrace</Link><Link href="/dashboard"><ArrowLeft /> Dashboard</Link></header>
     <section className="labs-hero"><div><p className="kicker">KARNATAKA OUTREACH DIRECTORY</p><h1>Potential wool testing and sector contacts</h1><p>Public leads farmers and the WoolTrace team can contact about fibre testing, sheep-and-wool programmes and future partnerships.</p></div><span><FlaskConical /> 3 public leads</span></section>
     <aside className="labs-notice"><strong>Not WoolTrace partners yet.</strong> These organisations are shown for outreach only. Inclusion does not mean onboarding, endorsement, availability or approval of any wool batch.</aside>
     <section className="labs-layout">

@@ -1,0 +1,12 @@
+/** Original, code-native sheep face. Decorative beside the WoolTrace wordmark. */
+export default function SheepMark({ size = 32, className = "" }: { size?: number; className?: string }) {
+  return <svg className={"wt-sheep-mark " + className} width={size} height={size} viewBox="0 0 64 64" fill="none" aria-hidden="true" focusable="false">
+    <path d="M22 31C16 23 5 22 6 30c1 9 12 13 18 7m18-6c6-8 17-9 16-1-1 9-12 13-18 7" fill="#244c48"/>
+    <path d="m12 29 7 5m33-5-7 5" stroke="#efba9a" strokeWidth="4" strokeLinecap="round"/>
+    <path d="M20 27c0-10 24-10 24 0v13c0 11-5 18-12 18s-12-7-12-18V27Z" fill="#244c48"/>
+    <path d="M16 28C9 24 10 14 18 12c0-8 10-10 15-4 7-6 16-1 14 6 8 4 8 12 2 16-5 3-10-1-13-3-5 5-9 3-13 0-2 4-5 4-7 1Z" fill="#fff9e9" stroke="#244c48" strokeWidth="2.8" strokeLinejoin="round"/>
+    <ellipse cx="27" cy="36" rx="2" ry="2.5" fill="#fff9e9"/><ellipse cx="37" cy="36" rx="2" ry="2.5" fill="#fff9e9"/>
+    <circle cx="24.5" cy="42" r="2.2" fill="#efba9a" opacity=".65"/><circle cx="39.5" cy="42" r="2.2" fill="#efba9a" opacity=".65"/>
+    <path d="m30 42 2 2 2-2m-2 2v3m-4 0c2 3 6 3 8 0" stroke="#fff1cf" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>;
+}

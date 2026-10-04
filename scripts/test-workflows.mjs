@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 import { createHmac, randomBytes } from "node:crypto";
 import { mkdtemp, readFile } from "node:fs/promises";
@@ -16,7 +17,7 @@ const port=process.env.TEST_PORT||"3124";
 const base="http://localhost:"+port,secret=randomBytes(48).toString("hex");
 const today=new Date().toISOString().slice(0,10);
 const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,10);
-const server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-p",port],{env:{...process.env,AUTH_SECRET:secret,TURSO_DATABASE_URL:url,TURSO_AUTH_TOKEN:"",APP_BASE_URL:base,DEMO_MODE:"false",GOOGLE_CLIENT_ID:"",GOOGLE_CLIENT_SECRET:""},stdio:["ignore","pipe","pipe"],windowsHide:true});
+const server=spawn(process.execPath,["--import","./scripts/mock-google-provider.mjs","node_modules/next/dist/bin/next","start","-p",port],{env:{...process.env,WOOLTRACE_TEST_OAUTH:"1",AUTH_SECRET:secret,TURSO_DATABASE_URL:url,TURSO_AUTH_TOKEN:"",APP_BASE_URL:base,DEMO_MODE:"false",GOOGLE_CLIENT_ID:"",GOOGLE_CLIENT_SECRET:""},stdio:["ignore","pipe","pipe"],windowsHide:true});
 let logs="";server.stdout.on("data",d=>logs+=d);server.stderr.on("data",d=>logs+=d);
 const users={farmer:{sub:"test-farmer",email:"farmer@example.test",name:"Test Farmer"},buyer:{sub:"test-buyer",email:"buyer@example.test",name:"Test Buyer"},stranger:{sub:"test-stranger",email:"stranger@example.test",name:"Other Farmer"},lab:{sub:"test-lab",email:"lab@example.test",name:"Test Lab"},processor:{sub:"test-processor",email:"processor@example.test",name:"Test Processor"}};
 function cookie(who){const payload=Buffer.from(JSON.stringify({...users[who],exp:Date.now()+3600000})).toString("base64url");return "wooltrace_session="+payload+"."+createHmac("sha256",secret).update(payload).digest("base64url");}
@@ -86,7 +87,7 @@ try{
  await api("processor","/api/batches/events","POST",{batchId,portalRole:"processor",title:"Spinning completed",location:"Test facility"},403);
  for(const route of ["/","/login","/privacy","/terms","/labs","/batch/WT-2610-KAR"]){assert.equal((await fetch(base+route)).status,200,route);checks++;}
  const landingHTML=await (await fetch(base+"/")).text();
- assert.ok(landingHTML.includes('class="wool-home"')&&landingHTML.includes("A story worth")&&landingHTML.includes("wooltrace-hero.png"),"Landing renders the new layout and original farmer image (including Next.js image URLs)");checks++;
+ assert.ok(landingHTML.includes('class="wool-home"')&&landingHTML.includes("From your flock")&&landingHTML.includes("wooltrace-hero.png"),"Landing renders the new layout and original farmer image (including Next.js image URLs)");checks++;
  assert.equal((landingHTML.match(/aria-pressed="(?:true|false)"/g)||[]).length,10,"Landing exposes ten selectable journey chapters");checks++;
  assert.equal((landingHTML.match(/<details(?:\s|>)/g)||[]).length,5,"Landing FAQs use native disclosures");checks++;
  for(const role of ["farmer","buyer","laboratory","transporter","warehouse","processor","brand"]){assert.ok(landingHTML.includes('href="/demo/'+role+'"'),"Landing opens the correct "+role+" demo");checks++;}
@@ -159,7 +160,63 @@ try{
   assert.equal((await legacy.execute("SELECT status FROM bids")).rows[0].status,"legacy_transferred");checks+=3;
  }finally{legacy.close();}
 
+ // Google callback routing uses an isolated local provider fixture. No Google
+ // account or production database is contacted by these integration checks.
+ users.carrier={sub:"test-new-carrier",email:"NEW-CARRIER@example.test",name:"New Carrier"};
+ users.existing={sub:"test-existing-partner",email:"existing-partner@example.test",name:"Existing Partner"};
+ await api(null,"/api/assignments","GET",undefined,401);
+ await api("buyer","/api/participants","POST",{batchId,email:users.carrier.email,role:"transporter"},201);
+ async function callback(code,expected){
+  const state="local-oauth-state",r=await fetch(base+"/api/auth/google/callback?code="+code+"&state="+state,{redirect:"manual",headers:{Cookie:"wooltrace_oauth_state="+state+"; wooltrace_oauth_verifier=local-test-verifier"}});
+  assert.equal(r.status,307);assert.equal(new URL(r.headers.get("location"),base).pathname,expected,"Google callback routes "+code);checks+=2;
+  return r;
+ }
+ await callback("carrier","/portal/transporter");
+ const carrierProfile=(await api("carrier","/api/profile")).profile;assert.equal(carrierProfile.role,"transporter");assert.equal(carrierProfile.onboarded,true);checks+=2;
+ assert.equal((await api("carrier","/api/batches")).batches[0].id,batchId);checks++;
+ assert.equal((await api("carrier","/api/batches?batchId="+validationBatch)).batches.length,0,"A batch-id query cannot bypass invitation scope");checks++;
+ await api("carrier","/api/batches","POST",{breed:"Deccani",weight:10,reserve:90,date:today,farmName:"Test Farm",village:"Test Village",district:"Chitradurga",state:"Karnataka",shearer:"Test Team"},403);
+ await api("carrier","/api/bids","GET",undefined,403);
+ await api("carrier","/api/participants?batchId="+batchId,"GET",undefined,403);
+ const carrierAccess=(await api("carrier","/api/assignments")).assignments;assert.equal(carrierAccess.length,1);assert.equal(carrierAccess[0].role,"transporter");checks+=2;
+ await api("stranger","/api/assignments","POST",{assignmentId:carrierAccess[0].id},403);
+ const opened=await api("carrier","/api/assignments","POST",{assignmentId:carrierAccess[0].id});assert.equal(opened.redirect,"/portal/transporter?batchId="+batchId);checks++;
+ await api("carrier","/api/assignments","POST",{assignmentId:carrierAccess[0].id},403,"https://untrusted.example");
+ await api("farmer","/api/participants","POST",{batchId:validationBatch,email:users.carrier.email,role:"warehouse"},201);
+ await callback("carrier","/assignments");
+ const multiple=await api("carrier","/api/assignments?limit=1");assert.equal(multiple.assignments.length,1);assert.equal(multiple.pagination.total,2);assert.equal(multiple.pagination.hasNext,true);checks+=3;
+ const allAccess=(await api("carrier","/api/assignments")).assignments,warehouseAccess=allAccess.find(a=>a.role==="warehouse");
+ await api("carrier","/api/assignments","POST",{assignmentId:warehouseAccess.id});
+ assert.equal((await api("carrier","/api/profile")).profile.role,"warehouse");assert.equal((await api("carrier","/api/batches")).batches[0].id,validationBatch);checks+=2;
+ await api("buyer","/api/participants","DELETE",{batchId,id:carrierAccess[0].id});
+ await api("carrier","/api/assignments","POST",{assignmentId:carrierAccess[0].id},403);
+ await callback("carrier","/portal/warehouse");
+ await api("carrier","/api/profile","PATCH",{role:"transporter"});
+ await api("carrier","/api/batches/events","POST",{batchId,portalRole:"transporter",title:"Delivery recorded",location:"Local delivery",performedAt:today},403);
+ await api("existing","/api/profile","PATCH",{role:"farmer"});
+ await api("buyer","/api/participants","POST",{batchId,email:users.existing.email,role:"transporter"},201);
+ await callback("existing","/portal/transporter");
+ assert.equal((await api("existing","/api/profile")).profile.role,"transporter","Existing accounts also enter their assigned role on Google login");checks++;
+ const roleHTML=await (await fetch(base+"/portal/transporter?batchId="+batchId,{headers:{Cookie:cookie("existing")}})).text();assert.ok(roleHTML.includes("Logistics workspace")&&roleHTML.includes("My assignments"));checks++;
+ await callback("uninvited","/onboarding");
+ await callback("unverified","/login");
+ await api("carrier","/api/assignments?page=0","GET",undefined,400);
+ assert.ok(landingHTML.includes("wt-sheep-mark")&&landingHTML.includes("wt-flock-doodle"),"Original sheep mark and flock are present on the landing");checks++;
  console.log("PASS: "+checks+" workflow/security checks. Isolated local database only.");
- if(process.argv.includes("--serve"))console.log("Local UI test server remains available at "+base+" (demo mode enabled, temporary database).");
+ if(process.argv.includes("--serve")){
+  // An opt-in localhost-only UI fixture; it signs fake test accounts, never real
+  // Google profiles. It is not imported or exposed by the deployed application.
+  const previewPort=Number(port)+1;
+  createServer((request,response)=>{
+   if(request.headers.host!=="localhost:"+previewPort){response.writeHead(403).end();return;}
+   const target=new URL(request.url,"http://localhost:"+previewPort).searchParams.get("account");
+   if(target&&["farmer","existing","carrier","buyer"].includes(target)){
+    response.writeHead(303,{"Set-Cookie":cookie(target)+"; HttpOnly; SameSite=Lax; Path=/; Max-Age=3600",Location:base+(target==="existing"?"/portal/transporter":"/assignments")}).end();return;
+   }
+   response.writeHead(200,{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"});
+   response.end('<!doctype html><title>Isolated WoolTrace UI preview</title><h1>Local UI test accounts</h1><p>Temporary database. Fake accounts only. No production access.</p><ul>'+["farmer","existing","carrier","buyer"].map(who=>'<li><a href="?account='+who+'">Open '+who+' test account</a></li>').join("")+'</ul>');
+  }).listen(previewPort,"127.0.0.1");
+  console.log("Isolated local UI preview: http://localhost:"+previewPort+". Public demo: "+base+"/demo");
+ }
 }catch(error){console.error(error);console.error(logs.slice(-2000));process.exitCode=1;}
 finally{client.close();if(!process.argv.includes("--serve")||process.exitCode)server.kill();}

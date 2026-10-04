@@ -1,9 +1,10 @@
+import SheepMark from "@/app/components/sheep-mark";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import QRCode from "qrcode";
-import { Sprout, ArrowLeft, MapPin } from "lucide-react";
+import { ArrowLeft, MapPin } from "lucide-react";
 import { getDb } from "@/db";
 import { batchEvents, farms, productLots, users, woolBatches } from "@/db/schema";
 import { hashBatchEvent, hashEvidence } from "@/app/lib/event-integrity";
@@ -38,7 +39,7 @@ export default async function BatchPassport({params}:{params:Promise<{id:string}
   lots=await db.select().from(productLots).where(eq(productLots.batchId,id)).orderBy(asc(productLots.createdAt));
  }
  const qr=await QRCode.toDataURL(appBaseUrl()+"/batch/"+encodeURIComponent(id),{width:220,margin:2});
- return <main className="passport-shell"><header className="passport-nav"><Link href="/"><span className="brand-mark"><Sprout/></span> WoolTrace</Link><Link href="/dashboard"><ArrowLeft/> Workspace</Link></header>
+ return <main className="passport-shell"><header className="passport-nav"><Link href="/"><span className="brand-mark"><SheepMark/></span> WoolTrace</Link><Link href="/dashboard"><ArrowLeft/> Workspace</Link></header>
  <section className="passport-hero"><div><p className="kicker light">{sample?"ILLUSTRATIVE EXAMPLE":"PUBLIC WOOL PASSPORT"}</p><h1>{sample?id:"The story of this wool"}</h1><p>{record.breed} · {record.weight} kg · {record.grade}</p><span>{sample?"Not a real farm, sale or laboratory record":integrity?"Recorded event chain matches":"Some records are incomplete or could not be checked"}</span></div><div className="passport-qr"><Image unoptimized width={130} height={130} src={qr} alt="QR linking to this wool passport"/><small>Scan the recorded journey</small></div></section>
  <section className="passport-grid"><article className="passport-main"><div className="passport-heading"><div><p className="kicker">SOURCE FARMER</p><h2>{record.farmer}</h2><p><MapPin/>{record.origin}</p></div></div><div className="passport-facts"><div><small>Breed</small><strong>{record.breed}</strong></div><div><small>Shearing started</small><strong>{record.started}</strong></div><div><small>Shearing completed</small><strong>{record.completed}</strong></div><div><small>Source weight</small><strong>{record.weight} kg</strong></div><div><small>Current owner</small><strong>{record.owner}</strong></div></div><hr/><p className="kicker">PARTICIPANT-RECORDED QUALITY</p><div className="quality-grid"><div><strong>{record.micron}</strong><span>Fibre diameter</span></div><div><strong>{record.staple}</strong><span>Staple length</span></div><div><strong>{record.grade}</strong><span>Assigned grade</span></div></div><p className="wt-notice">A QR reveals the submitted history; it cannot prove the physical wool’s identity or independently verify a farmer’s claims. This is not a government or laboratory certificate.</p><PassportActions batchId={id}/><p className="wt-help">Batch identifier: {id}</p>{lots.length>0&&<><h2>Linked output lots</h2>{lots.map(l=><div className="wt-lot-card" key={l.id}><h3>{l.name}</h3><p>{l.kind.replaceAll("_"," ")} · {l.weightKg} kg</p><Link href={"/lot/"+l.id}>Open product-lot QR →</Link></div>)}</>}</article>
  <aside className="passport-side"><p className="kicker">THE JOURNEY RECORDED SO FAR</p><h2>From the first shearing.</h2>{events.map((e,i)=><div className="passport-event done" key={i}><span>{i+1}</span><p><strong>{e.title}</strong><small>{[e.location,e.notes].filter(Boolean).join("\n")}</small>{e.photo&&<Image unoptimized width={320} height={220} src={e.photo} alt="Farmer-uploaded shearing evidence"/>}<em>{e.actor}<br/>Record: {e.hash}</em></p><time>{e.date}{e.logged&&<small className="wt-event-logged">Added {e.logged}</small>}</time></div>)}</aside></section><footer className="passport-footer"><p>WoolTrace preserves the source farmer while ownership changes. Dates shown in India time. Stage details are supplied by the participants named above.</p></footer></main>;

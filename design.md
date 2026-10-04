@@ -49,6 +49,12 @@ Landing imagery is not replaced. Floating cards explain the product instead of i
 - Focus outlines and reduced-motion preferences are respected.
 
 ## Content rules
+The visual identity uses an original SVG sheep-face mark in navigation, login, demos, passports and the favicon. Cream paper, quiet mint, soft yellow and a small illustrated flock add warmth without replacing the original farmer photograph. Prefer plain explanations over stacked marketing slogans. Decorative illustrations have no focus stops or announcements.
+
+My assignments shows exactly the batch and stage granted to the signed-in email. A partner opens a job to enter its matching workspace; transporter navigation calls its stage tools Logistics. Do not show farmer sale controls to logistics roles. Support multiple invited roles without making one invitation unlock every batch. Empty portals offer a useful next step instead of an unusable form.
+
+Forms use readable 16px input text on laptop and phone, meaningful labels, comfortable targets, and responsive single columns at constrained widths. Long batch IDs, email addresses, stage notes and payment references wrap. The mobile drawer remains scrollable on short screens. Narrow phones show metrics as rows rather than three cramped cards.
+
 Say farmer-recorded, participant-submitted and seller-confirmed. Do not say government certified, verified farm, guaranteed authentic, blockchain or automatic bank verification.
 Google proves account control, not farm ownership. The event hash chain is a consistency check, not independent certification.
 Service plans do not book providers; lab listings are outreach leads. Weather is optional and attributed to its source.
