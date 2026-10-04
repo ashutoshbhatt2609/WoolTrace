@@ -85,6 +85,11 @@ try{
  await api("buyer","/api/participants","DELETE",{batchId,id:access.id});
  await api("processor","/api/batches/events","POST",{batchId,portalRole:"processor",title:"Spinning completed",location:"Test facility"},403);
  for(const route of ["/","/login","/privacy","/terms","/labs","/batch/WT-2610-KAR"]){assert.equal((await fetch(base+route)).status,200,route);checks++;}
+ const landingHTML=await (await fetch(base+"/")).text();
+ assert.ok(landingHTML.includes('class="wool-home"')&&landingHTML.includes("A story worth")&&landingHTML.includes("wooltrace-hero.png"),"Landing renders the new layout and original farmer image (including Next.js image URLs)");checks++;
+ assert.equal((landingHTML.match(/aria-pressed="(?:true|false)"/g)||[]).length,10,"Landing exposes ten selectable journey chapters");checks++;
+ assert.equal((landingHTML.match(/<details(?:\s|>)/g)||[]).length,5,"Landing FAQs use native disclosures");checks++;
+ for(const role of ["farmer","buyer","laboratory","transporter","warehouse","processor","brand"]){assert.ok(landingHTML.includes('href="/demo/'+role+'"'),"Landing opens the correct "+role+" demo");checks++;}
  for(const route of ["/dashboard","/workspace/my-wool","/portal/farmer","/profile"]){const r=await fetch(base+route,{redirect:"manual"});const html=await r.text();assert.ok(r.status===307 || (r.status===200 && html.includes('url=/login')),route+" must redirect before private content renders");checks++;}
 
  // Role-specific pages and legacy demo isolation.

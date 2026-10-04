@@ -25,6 +25,15 @@ Shared AppShell across account screens. Desktop has a 240px navigation rail and 
 
 Landing imagery is not replaced. Floating cards explain the product instead of inventing demand or price metrics.
 
+## Public landing page refinement
+- Public-only styles live in app/landing.css under the wool-home root, without changing account forms or workspaces.
+- Use an editorial cream canvas, deep teal headings, restrained mint panels and yellow calls to action. Serif italic accents soften headings; body copy remains a readable system sans-serif.
+- Preserve the current farmer photo. Keep a single example-passport card rather than overlapping market-statistic cards or fictional customer avatars.
+- The wool journey is a selectable ten-chapter explorer. Desktop offers compact chapter buttons; phones use a native select. Previous/next controls, meaningful stage details and the recorded-by label make the lifecycle easier to understand.
+- The example QR opens the fixed illustrative passport and is generated against the current site origin. It is not certification or a real participant record.
+- Every role card opens its matching isolated demo. Native FAQ disclosures explain permission boundaries, certification limits and seller-confirmed UPI payments.
+- Avoid unsupported claims about farm verification, laboratory accreditation, guaranteed product authenticity or automatic payment verification.
+
 ## Components and interactions
 - Every icon-only action has an accessible name.
 - Every form has labelled inputs, fieldset busy state, server-backed validation and announced success/error feedback.

@@ -1,100 +1,84 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
-import PastureScene from "@/app/components/pasture-scene";
 import Link from "next/link";
-import {
-  ArrowRight, BadgeCheck, BarChart3, Boxes, CheckCircle2, ChevronRight,
-  Globe2, HandCoins, Menu, PackageCheck, QrCode, ShieldCheck,
-  Sprout, Truck, Warehouse, X,
-} from "lucide-react";
-import { useState } from "react";
-import { portalDefinitions, portalRoles, woolStages } from "@/app/lib/portals";
+import { ArrowDown, ArrowRight, Check, ChevronLeft, ChevronRight, Factory, FlaskConical, HandCoins, Landmark, Menu, PackageCheck, QrCode, Scissors, Sprout, Truck, Warehouse, X } from "lucide-react";
+import PastureScene from "@/app/components/pasture-scene";
+import { portalDefinitions, portalRoles, type PortalRole } from "@/app/lib/portals";
+import "./landing.css";
 
-const journey = [
-  { number: "01", title: "Register the shearing", text: "Create a digital batch with the farm, breed, date and weight recorded at source.", icon: Boxes, href: "/workspace/my-wool" },
-  { number: "02", title: "Add wool quality results", text: "Attach grade, micron and staple length when a laboratory is invited to record results.", icon: BadgeCheck, href: "/portal/laboratory" },
-  { number: "03", title: "Invite buyer offers", text: "Buyers compete on price, pickup time and payment terms.", icon: HandCoins, href: "/portal/buyer" },
-  { number: "04", title: "Track every hand-off", text: "Transport, storage, processing, yarn and fabric stay linked to the source batch.", icon: PackageCheck, href: "/portals" },
-];
-
-const capabilities = [
-  [QrCode, "QR wool passports", "One scan shows origin, farmer evidence, quality, ownership and every recorded handoff.", "/batch/WT-2610-KAR"],
-  [HandCoins, "Reverse bidding", "Farmers compare competing offers and accept the best net value on their own terms.", "/portal/buyer"],
-  [Truck, "Connected logistics", "Plan transport and storage, then invite partners to record handoffs.", "/portal/transporter"],
-  [BarChart3, "Direct market access", "See farmer-listed wool and prices submitted by buyers.", "/workspace/woolkart"],
+const chapters = [
+  { title:"Farm origin", short:"Origin", icon:Landmark, actor:"Farmer", description:"A wool story starts with the people and place behind it. The farmer creates the source record that stays connected to every later lot.", fields:["Farm or farmer-group name", "Village, district and sheep breed", "Source batch identity"] },
+  { title:"Shearing", short:"Shearing", icon:Scissors, actor:"Farmer", description:"Record when shearing starts, then complete the record with the actual date, final wool weight and a photo from the farm.", fields:["Start and completion dates", "Shearer or team and final weight", "Compressed shearing photo"] },
+  { title:"Laboratory results", short:"Quality", icon:FlaskConical, actor:"Invited laboratory", description:"When a laboratory is invited, its account can add fibre measurements and a report reference to the batch. Available results travel with the record.", fields:["Fibre diameter and staple length", "Measured quality and grade", "Result reference and contributor"] },
+  { title:"Direct buyer offers", short:"Offers", icon:HandCoins, actor:"Buyer and farmer", description:"Buyers submit their price, pickup time and payment terms. The farmer compares offers and chooses the sale—not a middleman.", fields:["Buyer-submitted price per kg", "Collection time and payment terms", "Farmer’s offer acceptance"] },
+  { title:"Payment & ownership", short:"Ownership", icon:PackageCheck, actor:"Seller", description:"The buyer pays the seller directly with BHIM or another UPI app. Ownership changes only after the seller checks their bank account and confirms receipt.", fields:["Direct seller UPI payment", "Seller-confirmed receipt", "Recorded ownership transfer"] },
+  { title:"Transport handoffs", short:"Transport", icon:Truck, actor:"Invited transporter", description:"Keep collection and delivery connected to the same source batch. The transporter records each handoff and where it happened.", fields:["Pickup before delivery", "Actual stage date and location", "Participant-submitted notes"] },
+  { title:"Storage", short:"Storage", icon:Warehouse, actor:"Invited warehouse", description:"Wool may wait between stages. Warehouse intake and release records make that part of its journey visible too.", fields:["Storage intake and release", "Facility and work date", "Handling notes"] },
+  { title:"Wool processing", short:"Processing", icon:Factory, actor:"Invited processor", description:"Follow the transformation from raw fleece through scouring, carding, spinning and weaving. Each recorded stage stays linked to the original batch.", fields:["Ordered processing stages", "Actual work dates", "Processing notes and contributor"] },
+  { title:"Source-linked output lots", short:"Products", icon:PackageCheck, actor:"Processor or brand", description:"Create yarn, fabric or product lots from a source batch or parent lot. Each output gets its own QR page and keeps a link back to the source.", fields:["Parent batch or lot", "Output type and allocated weight", "A public output-lot passport"] },
+  { title:"The public wool passport", short:"One QR", icon:QrCode, actor:"Anyone with the QR", description:"One scan opens the farmer-recorded origin and the stages contributed along the way. Customers can read the history without creating an account.", fields:["Source farmer and shearing evidence", "Recorded dates and handoffs", "Account-linked event history"] },
 ] as const;
+const roleCopy:Record<PortalRole,string> = {
+  farmer:"Record your shearing. Compare offers. Choose who you sell to.",
+  buyer:"Find farmer-listed wool and make your own offer.",
+  laboratory:"Add measurements to batches you’re invited to work on.",
+  transporter:"Record pickups, delivery dates and handoffs.",
+  warehouse:"Keep storage intake and release connected.",
+  processor:"Connect processing stages and source-linked output lots.",
+  brand:"Link finished products to their wool source.",
+};
+const questions = [
+  ["What does the QR actually show?", "It opens a public wool passport with the recorded farm origin, shearing dates and photo, available laboratory results, ownership milestones and participant-submitted stage updates. Output-lot pages also link back to their source batch."],
+  ["Is WoolTrace an independent certification service?", "No. Farmers record their own source and shearing details, and invited participants record their work. The event hash chain checks record consistency; it does not prove the physical wool is genuine or replace independent certification."],
+  ["Can anyone change my wool record?", "No. Account roles and batch permissions control who can add records. The owner grants partner access to a specific Google email and role. A buyer or laboratory cannot use the farmer’s shearing tools."],
+  ["How do farmers receive payment?", "Buyers pay the seller’s UPI ID directly using BHIM or another compatible UPI app. The seller checks their bank account and confirms the payment before ownership transfers. WoolTrace does not hold money or automatically verify bank payments."],
+  ["Can I try it without signing in?", "Yes. Choose any of the seven role demos. Sample activity is saved in that browser tab and kept separate from real records. Sign in with Google when you’re ready to create your own workspace."],
+] as const;
+function Brand(){return <><span className="home-brand-mark"><Sprout size={22} aria-hidden="true"/></span><strong>WoolTrace<span>.</span></strong></>;}
 
-function Mark() {
-  return <span className="khet-mark"><Sprout aria-hidden="true" /></span>;
-}
+export default function Home(){
+  const [menuOpen,setMenuOpen]=useState(false),[chapter,setChapter]=useState(0),[qr,setQr]=useState("");
+  const current=chapters[chapter],ChapterIcon=current.icon;
+  useEffect(()=>{
+    let active=true;
+    import("qrcode").then(QR=>QR.toDataURL(window.location.origin+"/batch/WT-2610-KAR",{width:240,margin:3,color:{dark:"#103f4c",light:"#ffffff"}})).then(value=>{if(active)setQr(value);}).catch(()=>{});
+    return()=>{active=false;};
+  },[]);
+  function closeMenu(){setMenuOpen(false);}
+  return <main className="wool-home" id="home">
+    <a href="#home-content" className="home-skip">Skip to content</a>
+    <header className="home-header"><div className="home-header-inner">
+      <a href="#home" className="home-brand" aria-label="WoolTrace home" onClick={closeMenu}><Brand/></a>
+      <nav className="home-desktop-nav" aria-label="Main navigation"><a href="#how">How it works</a><a href="#lifecycle">Wool journey</a><a href="#roles">For every role</a><a href="#questions">Questions</a></nav>
+      <div className="home-header-actions"><Link href="/login" className="home-signin">Log in</Link><Link href="/demo" className="home-button home-button-small">Try the demo <ArrowRight size={15}/></Link></div>
+      <button className="home-menu-button" aria-label={menuOpen?"Close navigation":"Open navigation"} aria-expanded={menuOpen} aria-controls="home-mobile-nav" onClick={()=>setMenuOpen(!menuOpen)}>{menuOpen?<X/>:<Menu/>}</button>
+    </div>{menuOpen&&<nav id="home-mobile-nav" className="home-mobile-nav" aria-label="Mobile navigation"><a href="#how" onClick={closeMenu}>How it works</a><a href="#lifecycle" onClick={closeMenu}>Wool journey</a><a href="#roles" onClick={closeMenu}>For every role</a><a href="#questions" onClick={closeMenu}>Questions</a><Link href="/login" onClick={closeMenu}>Log in with Google <ArrowRight size={16}/></Link><Link href="/demo" onClick={closeMenu}>Try a role demo <ArrowRight size={16}/></Link></nav>}</header>
 
-export default function Home() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const hindi = false;
+    <section className="home-hero home-container" id="home-content" tabIndex={-1} aria-labelledby="hero-title">
+      <div className="home-hero-copy"><span className="home-eyebrow"><Sprout size={15}/> FARMER-FIRST. SOURCE-CONNECTED.</span><h1 id="hero-title">Every fibre.<br/>A story worth<br/><em>following.</em></h1><p>From the first shearing to the finished fabric, keep the people, places and work behind your wool together in one QR journey.</p><div className="home-hero-actions"><Link className="home-button" href="/login">Start with your wool <ArrowRight size={18}/></Link><Link className="home-text-link" href="/demo">Take a look around <ArrowRight size={17}/></Link></div><div className="home-hero-note"><span><Check size={14}/> Farmer-recorded origin</span><span><Check size={14}/> Direct buyer offers</span></div></div>
+      <div className="home-hero-visual"><div className="home-photo-halo"/><div className="home-hero-photo"><Image src="/wooltrace-hero.png" alt="Indian farmer holding freshly shorn wool beside his sheep" fill priority sizes="(max-width: 760px) 90vw, 46vw"/><div className="home-photo-caption"><span><Sprout size={15}/> IT STARTS HERE</span><strong>With the farmer.<br/>With the fleece.</strong></div></div><Link href="/batch/WT-2610-KAR" className="home-photo-passport"><span className="home-mini-qr"><QrCode size={28}/></span><span><small>ONE CONNECTED JOURNEY</small><strong>Meet the wool passport</strong><em>Open an example <ArrowRight size={13}/></em></span></Link><span className="home-photo-side-note">THE ORIGIN IS NEVER JUST A FOOTNOTE.</span></div>
+    </section>
+    <section className="home-principles home-container" id="how" aria-label="How WoolTrace works">{[
+      {icon:Scissors,title:"Record it at the farm",text:"Start a batch with the source, shearing date, weight and photo.",href:"/demo/farmer"},
+      {icon:HandCoins,title:"Sell on your own terms",text:"Compare direct buyer offers, then choose the sale yourself.",href:"/demo/buyer"},
+      {icon:QrCode,title:"Keep the story connected",text:"Invite partners and share the recorded journey with one QR.",href:"/batch/WT-2610-KAR"},
+    ].map(({icon:Icon,title,text,href},i)=><Link href={href} key={title}><span className="home-principle-icon"><Icon size={23}/></span><div><small>0{i+1}</small><h2>{title}</h2><p>{text}</p></div><ArrowRight size={18}/></Link>)}</section>
 
-  return (
-    <main className="khet-page pastoral-theme">
-      <header className="khet-topbar">
-        <a href="#home" className="khet-brand" aria-label="WoolTrace home"><Mark /><strong>WoolTrace.</strong></a>
-        <nav className="khet-nav" aria-label="Main navigation">
-          <a href="#how">{hindi ? "यह कैसे काम करता है" : "How it works"}</a><a href="#platform">{hindi ? "प्लेटफ़ॉर्म" : "Platform"}</a><a href="#lifecycle">{hindi ? "ऊन की यात्रा" : "Wool journey"}</a><a href="#roles">{hindi ? "पोर्टल" : "Your workspace"}</a>
-        </nav>
-        <div className="khet-header-actions">
-          <a className="khet-signin" href="/login">{hindi ? "Google से साइन इन" : "Sign in with Google"}</a>
-          <a className="khet-open" href="/dashboard">{hindi ? "प्लेटफ़ॉर्म खोलें" : "Open platform"} <ArrowRight /></a>
-        </div>
-        <button className="khet-menu" type="button" aria-expanded={menuOpen} aria-label="Toggle menu" onClick={() => setMenuOpen((open) => !open)}>{menuOpen ? <X /> : <Menu />}</button>
-      </header>
+    <section className="home-journey-section" id="lifecycle" aria-labelledby="journey-title"><div className="home-container"><div className="home-section-heading"><div><span className="home-eyebrow">FROM SHEEP TO SHELF</span><h2 id="journey-title">A long journey.<br/><em>A clear record.</em></h2></div><p>Wool changes hands. Its origin shouldn’t disappear.<br/>Explore how each chapter stays connected to the source.</p></div>
+      <div className="home-journey-shell"><div className="home-chapter-tabs" aria-label="Choose a wool journey chapter">{chapters.map(({short,icon:Icon},i)=><button key={short} className={chapter===i?"is-selected":""} aria-pressed={chapter===i} aria-controls="home-chapter-detail" onClick={()=>setChapter(i)}><span>{String(i+1).padStart(2,"0")}</span><Icon size={18}/><strong>{short}</strong></button>)}</div><label className="home-chapter-select">Choose a chapter<select value={chapter} onChange={e=>setChapter(Number(e.target.value))}>{chapters.map((c,i)=><option key={c.title} value={i}>{String(i+1).padStart(2,"0")} · {c.title}</option>)}</select></label>
+      <div className="home-journey-body"><div className="home-chapter-detail" id="home-chapter-detail" role="region" aria-label="Selected journey chapter" aria-live="polite"><div className="home-chapter-top"><span className="home-chapter-icon"><ChapterIcon size={30}/></span><span>CHAPTER {String(chapter+1).padStart(2,"0")} / 10</span></div><h3>{current.title}</h3><p>{current.description}</p><ul>{current.fields.map(field=><li key={field}><Check size={15}/>{field}</li>)}</ul><div className="home-chapter-bottom"><span><small>{chapter===9?"READABLE BY":"RECORDED BY"}</small><strong>{current.actor}</strong></span><div><button aria-label="Previous journey chapter" disabled={chapter===0} onClick={()=>setChapter(chapter-1)}><ChevronLeft size={19}/></button><button aria-label="Next journey chapter" disabled={chapter===chapters.length-1} onClick={()=>setChapter(chapter+1)}><ChevronRight size={19}/></button></div></div></div>
+      <aside className="home-passport-preview" aria-label="Illustrative wool passport"><div className="home-passport-head"><span><Sprout size={16}/> WoolTrace</span><small>EXAMPLE PASSPORT</small></div><div className="home-passport-title"><span className="home-eyebrow">SOURCE-CONNECTED WOOL</span><h3>Deccani wool</h3><p>Illustrative Karnataka farm</p></div><div className="home-passport-timeline"><div><span/><p><strong>Origin recorded</strong><small>The farm behind the fleece</small></p><Check size={14}/></div><div><span/><p><strong>Shearing documented</strong><small>Date, final weight and photo</small></p><Check size={14}/></div><div><span/><p><strong>The journey continues</strong><small>Invited participants add their part</small></p><ArrowRight size={14}/></div></div><div className="home-passport-scan">{qr?<Image unoptimized src={qr} width={108} height={108} alt="QR opening the illustrative WoolTrace passport"/>:<QrCode size={72} aria-hidden="true"/>}<div><strong>A little QR.<br/>The whole recorded story.</strong><Link href="/batch/WT-2610-KAR">Open the sample <ArrowRight size={14}/></Link></div></div><p className="home-passport-disclaimer">Illustrative records, not a real farmer’s certification.</p></aside></div></div><div className="home-journey-footnote"><span><PackageCheck size={17}/> Only stages actually recorded appear on a real passport.</span><Link href="/batch/WT-2610-KAR" className="home-text-link">See an example journey <ArrowRight size={16}/></Link></div>
+    </div></section>
 
-      {menuOpen && <nav className="khet-mobile-nav"><a href="#how" onClick={() => setMenuOpen(false)}>{hindi ? "यह कैसे काम करता है" : "How it works"}</a><a href="#platform" onClick={() => setMenuOpen(false)}>{hindi ? "प्लेटफ़ॉर्म" : "Platform"}</a><a href="#lifecycle" onClick={() => setMenuOpen(false)}>{hindi ? "ऊन की यात्रा" : "Wool journey"}</a><a href="/portals">{hindi ? "पोर्टल चुनें" : "Choose a portal"}</a><a href="/login">{hindi ? "Google से साइन इन" : "Sign in with Google"}</a><a className="khet-open" href="/dashboard">{hindi ? "प्लेटफ़ॉर्म खोलें" : "Open platform"} <ArrowRight /></a></nav>}
+    <section className="home-roles home-container" id="roles" aria-labelledby="roles-title"><div className="home-section-heading"><div><span className="home-eyebrow">DIFFERENT PEOPLE. ONE CONNECTED RECORD.</span><h2 id="roles-title">Your part.<br/><em>Your workspace.</em></h2></div><p>A farmer needs shearing tools. A buyer needs offers.<br/>Choose a demo that matches the work you do.</p></div><div className="home-role-grid">{portalRoles.map(role=>{const p=portalDefinitions[role],Icon=p.icon;return <Link href={"/demo/"+role} className={"home-role-card "+(role==="farmer"?"home-role-featured":"")} key={role}><span className="home-role-icon"><Icon size={23}/></span>{role==="farmer"&&<span className="home-role-label">WHERE THE STORY BEGINS</span>}<h3>{p.short}</h3><p>{roleCopy[role]}</p><span className="home-role-action">Try this workspace <ArrowRight size={16}/></span></Link>;})}</div><p className="home-role-note">No account needed for demos. Your sample activity stays separate from real wool records.</p></section>
 
-      <section id="home" className="khet-hero">
-        <div className="khet-hero-copy">
-          <div className="khet-chip"><span /> {hindi ? "किसान-प्रथम ऊन जानकारी" : "Farmer-first wool intelligence"}</div>
-          <h1>{hindi ? "अपनी ऊन को जानें।" : "Know your wool."}<br /><em>{hindi ? "विश्वास के साथ बेचें।" : "Sell with confidence."}</em></h1>
-          <p>{hindi ? "WoolTrace किसान द्वारा दर्ज स्रोत, फोटो और हर अगले हस्तांतरण को एक QR यात्रा में रखता है।" : "WoolTrace keeps the farmer-recorded source, shearing photo and every later handoff together in one QR journey."}</p>
-          <div className="khet-hero-actions"><a className="khet-primary" href="/dashboard">{hindi ? "WoolTrace देखें" : "Explore WoolTrace"} <ArrowRight /></a><Link className="khet-secondary" href="/demo">{hindi ? "कार्यप्रणाली देखें" : "Try a role demo"} <ChevronRight /></Link></div>
-          <div className="khet-proof"><div className="khet-avatars"><span>R</span><span>S</span><span>A</span><span>+</span></div><p><strong>{hindi ? "किसान केंद्र में" : "Built with farmers at the centre"}</strong><small>{hindi ? "किसान · खरीदार · मूल्यांकनकर्ता · प्रसंस्करणकर्ता" : "Farmers · buyers · assessors · processors"}</small></p></div>
-        </div>
-        <div className="khet-visual">
-          <div className="khet-photo-card"><Image src="/wooltrace-hero.png" alt="Indian wool farmer holding freshly shorn wool beside sheep" fill priority sizes="(max-width: 900px) 92vw, 46vw" className="object-cover" /><div className="khet-photo-label"><ShieldCheck /><div><strong>It begins with the farmer</strong><span>From fleece to finished fabric</span></div></div></div>
-          <article className="khet-signal-card"><span>ONE CONNECTED RECORD</span><strong>Follow the fibre.</strong><p>Farm · shearing · processing</p><QrCode size={36}/></article>
-          <article className="khet-buyer-card"><span><Sprout /> Farmer-first commerce</span><strong>Your wool. Your terms.</strong><p>Compare offers directly.<br/>Choose who you sell to.</p><div><b>No middlemen</b><small>Direct UPI payment</small></div></article>
-          <span className="khet-orbit orbit-one" /><span className="khet-orbit orbit-two" />
-        </div>
-      </section>
+    <section className="home-selling home-container" aria-labelledby="selling-title"><div className="home-selling-panel"><div className="home-selling-copy"><span className="home-eyebrow">FAIRER CONNECTIONS, FEWER MIDDLEMEN.</span><h2 id="selling-title">Your wool.<br/><em>Your decision.</em></h2><p>See what buyers offer—not just a price someone else decides. Compare the collection time and terms, then accept what works for you.</p><Link href="/demo/farmer" className="home-button">Try the farmer demo <ArrowRight size={17}/></Link><small><Check size={14}/> Direct BHIM / UPI payment to the seller.</small></div><div className="home-offer-preview"><div><span className="home-eyebrow">ILLUSTRATIVE BUYER OFFERS</span><h3>More than a price.</h3><p>Compare the details before you choose.</p></div>{[{name:"Buyer A",price:"₹94",pickup:"Pickup in 2 days",terms:"Full payment before collection"},{name:"Buyer B",price:"₹96",pickup:"Pickup in 5 days",terms:"Full payment before collection"}].map((offer,i)=><div className="home-offer-row" key={offer.name}><span className="home-offer-avatar">{i===0?"A":"B"}</span><div><strong>{offer.name}</strong><small>{offer.pickup}</small><span>{offer.terms}</span></div><p>{offer.price}<small>/ kg</small></p></div>)}<div className="home-offer-note"><HandCoins size={19}/><p>You choose the offer. The seller confirms bank receipt before ownership transfers.</p></div></div></div></section>
 
-      <PastureScene className="wt-landing-pasture"/>
-      <section className="khet-metrics" aria-label="How WoolTrace connects wool"><div><strong>One QR</strong><span>the recorded wool journey</span></div><div><strong>Your terms</strong><span>direct buyer offers</span></div><div><strong>7 roles</strong><span>connected workspaces</span></div><div><strong>Farm to fabric</strong><span>source-linked output lots</span></div></section>
+    <section className="home-questions home-container" id="questions" aria-labelledby="questions-title"><div><span className="home-eyebrow">A FEW THINGS WORTH KNOWING</span><h2 id="questions-title">Clear answers.<br/><em>From the start.</em></h2><p>Traceability without the big promises.<br/>Here’s what WoolTrace does—and doesn’t do.</p><Link href="/demo" className="home-text-link">Explore it yourself <ArrowRight size={17}/></Link></div><div className="home-faq-list">{questions.map(([q,a])=><details key={q}><summary>{q}<span><ChevronRight size={18}/></span></summary><p>{a}</p></details>)}</div></section>
 
-      <section className="landing-portals" id="roles"><div><span className="khet-eyebrow">One platform, the right workspace</span><h2>Every participant records their part.</h2><p>Farmers record the origin. Invited partners add their stage to a shared, hash-linked wool passport.</p><Link href="/demo">Explore the role demos <ArrowRight /></Link></div><div>{portalRoles.map((role) => { const portal = portalDefinitions[role]; const Icon = portal.icon; return <a href={`/demo/${role}`} key={role}><Icon /><span><strong>{portal.short}</strong><small>{portal.owns[0]}</small></span><ChevronRight /></a>; })}</div></section>
-
-      <section id="how" className="khet-section khet-how">
-        <div className="khet-section-heading"><div><span className="khet-eyebrow">One connected wool journey</span><h2>Less uncertainty.<br />More bargaining power.</h2></div><p>Every record, service and sale comes together in one farmer-first workflow. Useful partners stay connected while farmers trade directly.</p></div>
-        <div className="khet-steps">{journey.map(({ number, title, text, icon: Icon, href }) => <article key={number}><div><span>{number}</span><Icon /></div><h3>{title}</h3><p>{text}</p><a href={href}>Open workflow <ChevronRight /></a></article>)}</div>
-      </section>
-
-      <section id="platform" className="khet-platform">
-        <div className="khet-platform-copy"><span className="khet-eyebrow light">Made for farmer ownership</span><h2>Your wool business,<br />all in one place.</h2><p>Register batches, add shearing photos, compare buyer offers, arrange pickup and show customers exactly where their fibre began.</p><a className="khet-primary" href="/dashboard">View farmer workspace <ArrowRight /></a><div className="khet-checks"><p><CheckCircle2 /> Keep ownership visible</p><p><CheckCircle2 /> Compare buyer prices and terms</p><p><CheckCircle2 /> Share the recorded batch history</p></div></div>
-        <div className="khet-workspace-card"><div className="workspace-top"><div><span>SAMPLE BATCH</span><strong>WT-2610-KAR</strong></div><QrCode /></div><div className="workspace-quality"><span><small>Grade</small><b>B</b></span><span><small>Micron</small><b>32.8</b></span><span><small>Weight</small><b>126 kg</b></span></div><div className="workspace-offer"><div><small>Leading offer</small><strong>₹94<em>/kg</em></strong></div><span>7 sample bids</span></div><div className="workspace-route"><span className="done"><CheckCircle2 /></span><i /><span className="done"><BadgeCheck /></span><i /><span className="active"><HandCoins /></span><i /><span><Truck /></span></div><div className="workspace-labels"><span>Sheared</span><span>Graded</span><span>Auction</span><span>Pickup</span></div></div>
-      </section>
-
-      <section className="khet-section khet-capabilities">
-        <div className="khet-section-heading"><div><span className="khet-eyebrow">Built around the batch</span><h2>Everything farmers need<br />to protect wool’s value.</h2></div><p>Operational tools stay simple on mobile, while each recorded update strengthens the public wool passport.</p></div>
-        <div className="khet-cap-grid">{capabilities.map(([Icon, title, text, href]) => <a href={href} key={title}><Icon /><h3>{title}</h3><p>{text}</p><span>Use this tool <ArrowRight /></span></a>)}</div>
-      </section>
-
-      <section id="lifecycle" className="landing-lifecycle"><div className="khet-section-heading"><div><span className="khet-eyebrow">The complete wool lifecycle</span><h2>From sheep to shelf,<br />the source stays visible.</h2></div><p>When a batch becomes yarn, fabric or several finished products, every child lot continues to point back to the original farmer record.</p></div><div>{woolStages.map((stage, index) => { const Icon = stage.icon; return <article key={stage.key}><span>{String(index + 1).padStart(2, "0")}</span><Icon /><h3>{stage.title}</h3><p>{stage.detail}</p><small>{stage.owner}</small></article>; })}</div><Link className="khet-primary" href="/batch/WT-2610-KAR">Scan the sample journey <QrCode /></Link></section>
-
-      <section id="trust" className="khet-trust">
-        <div><span className="khet-eyebrow light">Recorded. Transparent. Accountable.</span><h2>A more dependable wool economy.</h2><p>Farmer identity, available laboratory results, buyer offers, logistics status and ownership milestones appear in one shared record.</p></div><div className="khet-trust-grid"><article><ShieldCheck /><strong>Account-linked events</strong><span>Each update shows which participant recorded it.</span></article><article><Warehouse /><strong>Visible custody</strong><span>Invited handlers add storage and transport records.</span></article><article><Globe2 /><strong>Public history</strong><span>Anyone can scan the QR without seeing private account details.</span></article></div>
-      </section>
-
-      <section className="landing-final-cta"><div><span className="khet-eyebrow light">Ready when shearing starts</span><h2>Create the first wool passport.</h2></div><div><Link className="khet-primary" href="/workspace/my-wool">Register wool <ArrowRight /></Link><Link href="/demo">Try your workspace <ChevronRight /></Link></div></section>
-
-      <PastureScene/>
-      <footer className="khet-footer"><div><a href="#home" className="khet-brand"><Mark /><strong>WoolTrace.</strong></a><p>Farm-to-product traceability and direct wool commerce for Indian farmers.</p></div><div><strong>PLATFORM</strong><a href="#how">How it works</a><a href="#lifecycle">Wool lifecycle</a><Link href="/labs">Karnataka lab outreach</Link></div><div><strong>ACCESS</strong><Link href="/login">Google sign-in</Link><Link href="/dashboard">My workspace</Link><Link href="/demo">Explore demos</Link><Link href="/batch/WT-2610-KAR">Sample passport</Link></div><div><strong>ABOUT YOUR DATA</strong><Link href="/privacy">Privacy notice</Link><Link href="/terms">Platform terms</Link><p>English interface</p></div><small>© 2026 WoolTrace · From sheep to shelf, clearly.</small></footer>
-    </main>
-  );
+    <section className="home-final" aria-labelledby="final-title"><div className="home-container"><span className="home-eyebrow">THE NEXT CHAPTER STARTS WITH YOU.</span><h2 id="final-title">Give your wool<br/><em>a story to follow.</em></h2><p>Start at the farm. Keep the journey connected.</p><Link href="/login" className="home-button">Create your workspace <ArrowRight size={18}/></Link><Link className="home-text-link" href="/demo">Or try a demo first <ArrowRight size={16}/></Link></div><div className="home-landscape"><PastureScene/></div></section>
+    <footer className="home-footer"><div className="home-container"><div className="home-footer-top"><div><a href="#home" className="home-brand"><Brand/></a><p>The people behind the wool.<br/>The story behind the fibre.</p></div><nav aria-label="Footer navigation"><a href="#lifecycle">Wool journey</a><Link href="/demo">Role demos</Link><Link href="/labs">Karnataka lab outreach</Link><Link href="/login">Google sign-in</Link></nav><div><span>BUILT FOR CONNECTED WOOL</span><p>Farmer-recorded origins.<br/>Participant-submitted history.</p><a href="#home">Back to the top <ArrowDown size={15}/></a></div></div><div className="home-footer-bottom"><small>© 2026 WoolTrace · From sheep to shelf, clearly.</small><div><Link href="/privacy">Privacy notice</Link><Link href="/terms">Platform terms</Link></div></div></div></footer>
+  </main>;
 }
