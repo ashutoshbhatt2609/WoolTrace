@@ -17,7 +17,7 @@ const port=process.env.TEST_PORT||"3124";
 const base="http://localhost:"+port,secret=randomBytes(48).toString("hex");
 const today=new Date().toISOString().slice(0,10);
 const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,10);
-const server=spawn(process.execPath,["--import","./scripts/mock-google-provider.mjs","node_modules/next/dist/bin/next","start","-p",port],{env:{...process.env,WOOLTRACE_TEST_OAUTH:"1",AUTH_SECRET:secret,TURSO_DATABASE_URL:url,TURSO_AUTH_TOKEN:"",APP_BASE_URL:base,DEMO_MODE:"false",GOOGLE_CLIENT_ID:"",GOOGLE_CLIENT_SECRET:""},stdio:["ignore","pipe","pipe"],windowsHide:true});
+const server=spawn(process.execPath,["--import","./scripts/mock-google-provider.mjs","node_modules/next/dist/bin/next","start","-p",port],{env:{...process.env,WOOLTRACE_TEST_OAUTH:"1",AUTH_SECRET:secret,TURSO_DATABASE_URL:url,TURSO_AUTH_TOKEN:"",APP_BASE_URL:base,DEMO_MODE:"false",GOOGLE_CLIENT_ID:"",GOOGLE_CLIENT_SECRET:"",OPEN_METEO_API_KEY:"local-weather-fixture",WEATHER_NONCOMMERCIAL:"false",GEMINI_API_KEY:"local-ai-fixture",GEMINI_MODEL:"wooltrace-test-model"},stdio:["ignore","pipe","pipe"],windowsHide:true});
 let logs="";server.stdout.on("data",d=>logs+=d);server.stderr.on("data",d=>logs+=d);
 const users={farmer:{sub:"test-farmer",email:"farmer@example.test",name:"Test Farmer"},buyer:{sub:"test-buyer",email:"buyer@example.test",name:"Test Buyer"},stranger:{sub:"test-stranger",email:"stranger@example.test",name:"Other Farmer"},lab:{sub:"test-lab",email:"lab@example.test",name:"Test Lab"},processor:{sub:"test-processor",email:"processor@example.test",name:"Test Processor"}};
 function cookie(who){const payload=Buffer.from(JSON.stringify({...users[who],exp:Date.now()+3600000})).toString("base64url");return "wooltrace_session="+payload+"."+createHmac("sha256",secret).update(payload).digest("base64url");}
@@ -202,6 +202,29 @@ try{
  await callback("unverified","/login");
  await api("carrier","/api/assignments?page=0","GET",undefined,400);
  assert.ok(landingHTML.includes("wt-sheep-mark")&&landingHTML.includes("wt-flock-doodle"),"Original sheep mark and flock are present on the landing");checks++;
+ await api(null,"/api/profile/role","PATCH",{role:"buyer"},401);
+ await api("farmer","/api/profile/role","PATCH",{role:"admin"},400);
+ await api("farmer","/api/profile/role","PATCH",{role:"buyer"},403,"https://untrusted.example");
+ await api("farmer","/api/profile/role","PATCH",{role:"buyer"});
+ const switched=(await api("farmer","/api/profile")).profile;
+ assert.equal(switched.role,"buyer");assert.equal(switched.organisation,"Local test");assert.equal(switched.upiVpa,"test-seller@upi");checks+=3;
+ await api("farmer","/api/profile/role","PATCH",{role:"transporter"});
+ assert.equal((await api("farmer","/api/batches")).batches.length,0,"Role switch must not grant batch access");checks++;
+ await api("farmer","/api/profile/role","PATCH",{role:"farmer"});
+ const switchHTML=await (await fetch(base+"/dashboard",{headers:{Cookie:cookie("farmer")}})).text();assert.ok(switchHTML.includes('aria-label="Switch workspace role"')&&switchHTML.includes('/insights'));checks++;
+ const demoSwitchHTML=await (await fetch(base+"/demo/buyer")).text();assert.ok(demoSwitchHTML.includes('aria-label="Switch workspace role"'));checks++;
+ await api(null,"/api/insights","GET",undefined,401);
+ await api("buyer","/api/insights?area=unknown","GET",undefined,400);
+ const emptyInsights=await api("buyer","/api/insights?area=koppal");assert.equal(emptyInsights.market.status,"no_data");assert.equal(emptyInsights.market.quotes.length,0);assert.equal(emptyInsights.weather.forecast.length,3);assert.equal(emptyInsights.weather.current.temperatureC,26);checks+=4;
+ await client.execute({sql:"INSERT INTO farms(id,owner_id,name,village,district,state,flock_size) VALUES(?,?,?,?,?,?,?)",args:["insight-farm",users.farmer.sub,"Example market farm","Village","Chitradurga","Karnataka",10]});
+ await client.execute({sql:"INSERT INTO wool_batches(id,farmer_id,farm_id,breed,sheared_at,weight_kg,grade,status,sale_status,reserve_price,current_owner_id,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",args:["insight-listed",users.farmer.sub,"insight-farm","Deccani",Date.now(),10,"Pending","shearing_completed","listed",92,users.farmer.sub,Date.now()]});
+ const marketInsights=await api("buyer","/api/insights?area=chitradurga");assert.equal(marketInsights.market.quotes.length,1);assert.equal(marketInsights.market.quotes[0].low,92);assert.equal(marketInsights.market.externalStatus,"not_connected");checks+=3;
+ await api("buyer","/api/insights/assistant","POST",{area:"chitradurga",question:"How do I compare offers?"},400);
+ await api("buyer","/api/insights/assistant","POST",{area:"chitradurga",question:"How do I compare offers?",consent:true},403,"https://untrusted.example");
+ const aiAnswer=await api("buyer","/api/insights/assistant","POST",{area:"chitradurga",question:"How do I compare offers?",consent:true});assert.ok(aiAnswer.answer.includes("buyer"));checks++;
+ await api("buyer","/api/insights/assistant","POST",{area:"chitradurga",question:"Simulate upstream failure",consent:true},503);
+ for(let i=0;i<3;i++)await api("buyer","/api/insights/assistant","POST",{area:"chitradurga",question:"Explain source data",consent:true});
+ await api("buyer","/api/insights/assistant","POST",{area:"chitradurga",question:"Explain source data",consent:true},429);
  console.log("PASS: "+checks+" workflow/security checks. Isolated local database only.");
  if(process.argv.includes("--serve")){
   // An opt-in localhost-only UI fixture; it signs fake test accounts, never real

@@ -382,3 +382,17 @@ Independent verification, physical tag/custody controls, corrections and dispute
 Say “farmer-recorded”, “invited participant”, “seller-confirmed payment”, “public traceability page” and “hash consistency check”. Explain what those mean with one concrete example.
 
 Avoid claiming government certification, verified physical authenticity, blockchain, automatic bank confirmation, enrolled laboratory partners, automatic logistics booking or continuously streamed real-time prices. The strongest presentation is a working demo plus a precise explanation of its scope.
+
+## 15. Account switching, weather and AI insights
+
+The workspace dropdown switches the active role on the same Google account, without asking the user to return to their profile. A dedicated role endpoint preserves organisation, UPI settings and records. Partner invitations and ownership checks remain enforced: choosing Transporter does not unlock someone else's wool. Demo switching changes only the sample portal.
+
+The insights page offers Karnataka district selection. Open-Meteo provides model-based current weather and three-day forecasts when the operator enables a suitable plan. Public WoolTrace listings are grouped by district, breed and grade to show recent seller asking-price ranges; these are not independent market rates or completed sales. A wool-specific external price provider remains a pending integration.
+
+An optional server-side Gemini assistant explains the displayed data and workflow for the active role. A user must opt in to sending the question, area, role and aggregate source data. The assistant receives no automatic account identity, private offers or payment data, has no write tools, and must not invent missing prices or forecasts. Requests are authenticated, bounded, timed out and rate-limited. Source data and human decisions remain authoritative. Setup is documented in INSIGHTS_SETUP.md.
+
+**Q: Does AI discover the current wool price?** No. It explains the supplied data; only a connected, dated wool-price feed could supply external current rates.
+
+**Q: Can a role switch bypass access restrictions?** No. The role changes the tools and navigation. Database ownership and matching-email invitations still determine batch access.
+
+**Q: Are the API tests live-provider tests?** No. Isolated fixtures check parsing, consent, routing, failures and rate limiting without external credentials. Production provider connectivity requires separate testing after configuration.

@@ -58,3 +58,5 @@ Forms use readable 16px input text on laptop and phone, meaningful labels, comfo
 Say farmer-recorded, participant-submitted and seller-confirmed. Do not say government certified, verified farm, guaranteed authentic, blockchain or automatic bank verification.
 Google proves account control, not farm ownership. The event hash chain is a consistency check, not independent certification.
 Service plans do not book providers; lab listings are outreach leads. Weather is optional and attributed to its source.
+
+The account toolbar keeps a clearly labelled role dropdown above every workspace, including demos. It is keyboard-friendly, uses comfortable mobile targets and displays loading/error feedback. Role changes preserve the account and records. Weather & wool insights is shared across roles with a separate district picker; asking prices, source times and unavailable external feeds are labelled explicitly. The AI question field requires opt-in and never visually impersonates a measurement or certification.
